@@ -71,6 +71,24 @@ describe('Fields', () => {
     expect(valueOf('Improvement').querySelector('a')).toBeNull()
   })
 
+  test('records: each linked, comma-separated, with known labels', async () => {
+    const OTHER = '3c0c7a52-9f0e-4c1e-8a57-3c3f1e6d9a10'
+    await renderFields([
+      {
+        label: 'Zoning',
+        kind: 'records',
+        type: 'zoning',
+        ids: [ID, OTHER],
+        labels: { [ID]: 'R-1' },
+      },
+      { label: 'None', kind: 'records', type: 'party', ids: [] },
+    ])
+    expect(valueOf('Zoning').textContent).toBe(`R-1, ${OTHER}`)
+    expect(screen.getByRole('link', { name: 'R-1' }).getAttribute('href')).toBe(`/zoning/${ID}`)
+    expect(screen.getByRole('link', { name: OTHER }).getAttribute('href')).toBe(`/zoning/${OTHER}`)
+    expect(valueOf('None').textContent).toBe('—')
+  })
+
   test('timestamp: ISO 8601', async () => {
     await renderFields([
       { label: 'Time', kind: 'timestamp', value: { seconds: 1700000000n, nanos: 5e8 } },

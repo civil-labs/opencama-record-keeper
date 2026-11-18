@@ -24,8 +24,8 @@ describe('routes', () => {
   })
 
   test('a record route with a valid UUID renders its page', async () => {
-    await renderApp(`/parcels/${ID}`)
-    expect(await screen.findByText('Parcel details: not built yet.')).toBeDefined()
+    await renderApp(`/addresses/${ID}`)
+    expect(await screen.findByText('Address: not built yet.')).toBeDefined()
   })
 
   test('/parcels/not-a-uuid says so in the pane, without an API call', async () => {

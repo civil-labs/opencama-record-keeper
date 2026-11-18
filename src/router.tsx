@@ -15,6 +15,7 @@ import {
 } from '@tanstack/react-router'
 import type { InstanceMetadata } from './api/instance.ts'
 import { landUsesQuery, neighborhoodsQuery, zoningQuery } from './api/lookups.ts'
+import { parcelExtentQuery, parcelQuery } from './api/parcels.ts'
 import type { Auth } from './auth.ts'
 import type { Config } from './config.ts'
 import { Navbar } from './components/Navbar.tsx'
@@ -23,6 +24,7 @@ import { Callback, CallbackError } from './routes/Callback.tsx'
 import { LandUsePage, NeighborhoodPage, ZoningPage } from './routes/LookupPage.tsx'
 import { NotBuiltYet } from './routes/NotBuiltYet.tsx'
 import { NotFound } from './routes/NotFound.tsx'
+import { ParcelPane } from './routes/ParcelPane.tsx'
 import { ParcelsLayout } from './routes/ParcelsLayout.tsx'
 import { spacing } from './theme/tokens.stylex.ts'
 
@@ -150,7 +152,21 @@ const parcelRoute = createRoute({
     parse: ({ parcelId }) => ({ parcelId: parseUuid(parcelId) }),
     stringify: ({ parcelId }) => ({ parcelId }),
   },
-  component: () => <NotBuiltYet page="Parcel details" />,
+  /**
+   * Prefetches the parcel and the lookups its labels use, and starts its
+   * extent for the map, in parallel. Transfers load on their own.
+   */
+  loader: async ({ context: { queryClient, transport }, params: { parcelId } }) => {
+    void queryClient.prefetchQuery(parcelExtentQuery(transport, parcelId))
+    const [parcel] = await Promise.all([
+      queryClient.ensureQueryData(parcelQuery(transport, parcelId)),
+      queryClient.ensureQueryData(landUsesQuery(transport)),
+      queryClient.ensureQueryData(zoningQuery(transport)),
+      queryClient.ensureQueryData(neighborhoodsQuery(transport)),
+    ])
+    if (!(parcelId in parcel.parcels)) throw notFound()
+  },
+  component: ParcelPane,
   // Rendered in the pane, so the map stays usable.
   notFoundComponent: () => <p>No parcel with this ID.</p>,
 })
