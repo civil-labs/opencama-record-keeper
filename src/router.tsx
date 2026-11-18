@@ -22,6 +22,7 @@ import {
   zoningQuery,
 } from './api/lookups.ts'
 import { parcelExtentQuery, parcelQuery } from './api/parcels.ts'
+import { partyQuery } from './api/parties.ts'
 import { transferQuery } from './api/transfers.ts'
 import type { Auth } from './auth.ts'
 import type { Config } from './config.ts'
@@ -31,10 +32,10 @@ import { RouteError } from './components/RouteError.tsx'
 import { AddressPage } from './routes/AddressPage.tsx'
 import { Callback, CallbackError } from './routes/Callback.tsx'
 import { LandUsePage, NeighborhoodPage, ZoningPage } from './routes/LookupPage.tsx'
-import { NotBuiltYet } from './routes/NotBuiltYet.tsx'
 import { NotFound } from './routes/NotFound.tsx'
 import { ParcelPane } from './routes/ParcelPane.tsx'
 import { ParcelsLayout } from './routes/ParcelsLayout.tsx'
+import { PartyPage } from './routes/PartyPage.tsx'
 import { TransferPage } from './routes/TransferPage.tsx'
 import { spacing } from './theme/tokens.stylex.ts'
 
@@ -228,7 +229,12 @@ const partyRoute = createRoute({
     parse: ({ partyId }) => ({ partyId: parseUuid(partyId) }),
     stringify: ({ partyId }) => ({ partyId }),
   },
-  component: () => <NotBuiltYet page="Party" />,
+  loader: async ({ context: { queryClient, transport }, params: { partyId } }) => {
+    const data = await queryClient.ensureQueryData(partyQuery(transport, partyId))
+    if (!(partyId in data.parties)) throw notFound()
+  },
+  component: PartyPage,
+  notFoundComponent: () => <p>No party with this ID.</p>,
 })
 
 const transferRoute = createRoute({

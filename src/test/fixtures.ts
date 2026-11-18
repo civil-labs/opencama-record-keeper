@@ -2,6 +2,7 @@
 // Connect router transport. Synthetic data only.
 import {
   AddressesService,
+  PartiesService,
   LandUsesService,
   NeighborhoodService,
   ParcelsService,
@@ -176,6 +177,18 @@ export function fakeCivilOs(
             })),
         }
       },
+      getTransfersByPartyId: (req) => {
+        record('getTransfersByPartyId', req)
+        return {
+          edges: [
+            {
+              cursor: 't1',
+              node: { transferId: IDS.transfer(3), transferAmount: '520000.0000' },
+            },
+          ],
+          pageInfo: { hasNextPage: false },
+        }
+      },
       getTransfersByParcelId: (req) => {
         record('getTransfersByParcelId', req)
         if (options.failNextTransfersPage && req.after) {
@@ -248,6 +261,34 @@ export function fakeCivilOs(
               cursor: 'm1',
               node: { partyId: IDS.partyA, name: 'Fixture Owner 2', mailingAddressId: IDS.address },
             },
+          ],
+          pageInfo: { hasNextPage: false },
+        }
+      },
+    })
+    router.service(PartiesService, {
+      getPartiesById: (req) => {
+        record('getPartiesById', req)
+        const parties: Record<string, object> = {}
+        if (req.partyIds.includes(IDS.partyA)) {
+          parties[IDS.partyA] = {
+            partyId: IDS.partyA,
+            name: 'Fixture Owner 2',
+            mailingAddressId: IDS.address,
+            mailingAddress: '2 Fixture Way, Testville ZZ000',
+          }
+        }
+        if (req.partyIds.includes(IDS.partyC)) {
+          parties[IDS.partyC] = { partyId: IDS.partyC, name: 'Fixture Owner 4', mailingAddress: 'PO Box 4' }
+        }
+        return { parties }
+      },
+      getParcelsByPartyId: (req) => {
+        record('getParcelsByPartyId', req)
+        return {
+          edges: [
+            { cursor: 'q1', node: { parcelId: IDS.parcel, ownershipShare: '0.5000' } },
+            { cursor: 'q2', node: { parcelId: IDS.parcelNoGeometry, ownershipShare: '1.0000' } },
           ],
           pageInfo: { hasNextPage: false },
         }
