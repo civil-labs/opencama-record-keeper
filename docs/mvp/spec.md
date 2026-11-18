@@ -19,7 +19,7 @@ each page shows, and how it's tested. The order of the work goes in `plan.md`.
 | Styling | StyleX (`@stylexjs/stylex`), with its official Vite integration | Styles are typed and live next to the components that use them. They compile to one static, atomic CSS file at build time, with no runtime style injection, so the CSP needs no `'unsafe-inline'`. See [Styling](#styling). |
 | Routing | `@tanstack/react-router` (pinned to an exact version), with routes defined in code | Every record gets a real, shareable URL, and Back works. Route paths, params and search params are type-checked, so a broken link is a compile error. Loaders share the TanStack Query cache. |
 | Data | `@tanstack/react-query` + `@connectrpc/connect-query` | One shared cache for lookups, cursor pagination for transfers, per-section loading and errors, and one retry policy based on Connect error codes. For the edit phase it adds mutations, invalidation and refetch on focus. Connect-Query builds typed queries and keys from the SDK's method descriptors (see [Data fetching](#data-fetching)). |
-| API client | `@civil-labs/civil-os-api`, `@connectrpc/connect`, `@connectrpc/connect-web` | The published, generated client. Connect JSON over `fetch`. |
+| API client | `@civil-labs/civil-os-api` (exactly `0.4.0`, public-api v0.4.0), `@connectrpc/connect`, `@connectrpc/connect-web` | The published, generated client. Connect JSON over `fetch`. 0.3.0 added the address, party, parcel-extent, transfers-by-party and neighborhood-definition reads this spec uses; 0.4.0 renamed `GetNeighborhoodDefinitionsResponse`'s map to `neighborhoodDefinitions`. |
 | Map | `maplibre-gl` | Renders a basemap style, with the Civil OS MVT parcel tiles on top. |
 | Auth | `oidc-client-ts` | Authorization code + PKCE in the browser, against any OIDC issuer. |
 | Tests | `vitest` | Unit tests for the pure helpers. |
@@ -225,28 +225,19 @@ TanStack Query, using Connect-Query to build the queries.
   success they invalidate by service or method, so every page showing that record
   refreshes.
 
-### To confirm before building
+### Connect-Query and the SDK
 
 Connect-Query v2 accepts protobuf-es v2 method descriptors directly, without the separate
-`protoc-gen-connect-query` codegen step.
+`protoc-gen-connect-query` codegen step. Confirmed while planning (2026-11-17):
 
-**Already confirmed from civil-os source:**
+- `@civil-labs/civil-os-api` is generated with protobuf-es v2, which writes each service's
+  descriptor (`ParcelsService` and the others) into its `_pb.js` file. The package root
+  re-exports every public `_pb.js` module (`sdk/js/scripts/gen-index.mjs`), so the
+  descriptors can be imported from `@civil-labs/civil-os-api`.
+- Its `@bufbuild/protobuf` dependency (`^2.11.0`) satisfies Connect-Query's peer
+  dependency (`@bufbuild/protobuf` `2.x`).
 
-- `@civil-labs/civil-os-api` 0.2.0 is generated with `buf.build/bufbuild/es:v2.11.0`, which
-  writes each service's descriptor (`ParcelsService` and the others) into its `_pb.js`
-  file.
-- The package root re-exports every public `_pb.js` module (`sdk/js/scripts/gen-index.mjs`),
-  so the descriptors can be imported from `@civil-labs/civil-os-api`.
-
-**Still to check against the published package, before building:**
-
-1. Its `@bufbuild/protobuf` version (`^2.11.0`) satisfies Connect-Query's peer
-   dependency.
-2. A `useQuery` against the local stack returns typed data.
-
-If any of these fails, the fallback is hand-written `queryOptions` factories in
-`src/api/`, one per RPC, with keys `[service, method, input]`. The rest of this spec is
-unchanged either way. A fix to the SDK's exports belongs in civil-os, not here.
+What remains is checked by the first real query against the local stack, in the plan.
 
 ## Routes
 
@@ -426,7 +417,8 @@ When `parcelId` changes:
    `["==", ["id"], Number(featureId)]`.
 3. **Center it.**
    - Find the parcel's bounding box: the [parcel extent](#parcel-location) from Civil
-     OS. Until that ships, merge the boxes of every tile-clipped piece that
+     OS. If the parcel is absent from that response, merge the boxes of every
+     tile-clipped piece that
      `querySourceFeatures("parcels", { sourceLayer: "parcels", filter })` returns.
    - Move the camera with `easeTo`:
      - **center:** the middle of the box;
@@ -446,40 +438,21 @@ camera doesn't move, and the pane says "This parcel has no map geometry."
 
 #### Parcel location
 
-Civil OS's public API returns no geometry or location for a parcel. The map learns
-where a parcel is only from tiles it has already loaded.
+The map finds a parcel with `ParcelsService/GetParcelExtentsWGS84ByParcelId`
+(`parcelIds: [parcelId]`, no `legalAsOf`). It returns `extents`, a map from parcel ID
+to `ExtentWGS84` (`minX, minY, maxX, maxY`), the bounding box of the parcel's current
+geometry.
 
-- **A map click is always covered.** The clicked parcel is in loaded tiles.
-- **A parcel opened by URL may not be.** This covers a link from a transfer page, a
-  reload, or a shared link. Its tile may not be loaded, and with the map zoomed out to
-  the whole jurisdiction, parcel tiles may not draw at all.
-
-**MVP fallback:** after the map is `idle`, try `querySourceFeatures`.
-
-- If the parcel is found, center it.
-- If not, highlight it anyway, leave the camera at the bounds, and put a one-line note
-  in the pane: "Location not loaded. Zoom in to find it on the map." The highlight
-  shows up as soon as its tile loads.
-
-**Proper fix (a Civil OS dependency):** a non-breaking addition to `ParcelsService`,
-proposed in civil-os `docs/address-party-read-api/intent.md` alongside the address and
-party reads:
-
-```proto
-// The current legal geometry's WGS84 bounding box, per parcel. Voided parcels and
-// parcels with no geometry are left out of the map.
-rpc GetParcelExtentsWGS84ByParcelId(GetParcelExtentsWGS84ByParcelIdRequest)
-    returns (GetParcelExtentsWGS84ByParcelIdResponse) {
-  option idempotency_level = NO_SIDE_EFFECTS;
-}
-message GetParcelExtentsWGS84ByParcelIdRequest { repeated string parcel_ids = 1; }
-message GetParcelExtentsWGS84ByParcelIdResponse { map<string, Extent> extents = 1; }
-// Extent: min_x, min_y, max_x, max_y, as in GetEstimatedParcelsExtentWGS84Response.
-```
-
-- Once it ships, step 3 of [Selection](#selection) uses it first, and the tile lookup
-  remains only as a fallback.
-- The name and shape here are a proposal. The Civil OS spec owns them.
+- It's a separate query from the parcel details, with `staleTime` like the other
+  records. Both start in the `$parcelId` route's loader, so they run in parallel.
+- **A parcel absent from `extents`** (unknown, voided, or with no geometry) falls back
+  to the loaded tiles: after the map is `idle`, try `querySourceFeatures`.
+  - If the parcel is found, center it.
+  - If not, highlight it anyway, leave the camera where it is, and put a one-line note
+    in the pane: "Location not loaded. Zoom in to find it on the map." The highlight
+    shows up as soon as its tile loads.
+- **If the extent request fails,** the same fallback is used, and the error isn't
+  shown. The parcel's details are unaffected.
 
 #### Basemap
 
@@ -528,7 +501,7 @@ from the details below.
 **Options:**
 
 - **Source:** `NeighborhoodService/GetNeighborhoodDefinitions`, fetched once **on app
-  load**. The root route's loader calls `ensureQueryData` for it after the auth check,
+  load**. The definitions are the response's `neighborhoodDefinitions` map, keyed by ID. The root route's loader calls `ensureQueryData` for it after the auth check,
   since the call needs a token.
 - **Caching:** the query is cached with `staleTime: Infinity` and `gcTime: Infinity`, so
   it's never refetched or dropped while the app is open.
@@ -595,8 +568,7 @@ reloads, new tabs and browser restarts:
   - There's no `valuationId`, so the valuation fields are empty (see Non-goals in the
     intent).
   - `neighborhoodId` is the parcel's neighborhood under the selected definition, or
-    empty if it has none there. Under some definitions it may be empty even when one
-    is assigned, until civil-os `docs/neighborhoods-api-fixes` ships.
+    empty if it has none there.
 - The lookups for land use, zoning and neighborhood names.
 
 **Fields:** every `ParcelDetails` field, then every `ParcelImprovementsSummary` field.
@@ -614,8 +586,8 @@ reloads, new tabs and browser restarts:
 `featureId` is shown as plain text, since the map already shows the parcel.
 
 **Loader:** the `$parcelId` route prefetches the parcel, with the selected definition
-read from the store, and the lookups (land uses, zoning, neighborhoods) with
-`ensureQueryData`. It waits for the definitions query from the root loader first, so the
+read from the store, its extent (see [Parcel location](#parcel-location)), and the
+lookups (land uses, zoning, neighborhoods) with `ensureQueryData`. It waits for the definitions query from the root loader first, so the
 selection is settled before the parcel is requested. It doesn't wait for transfers; that
 section loads on its own. Its pending and error components render **inside the pane**,
 so the map stays visible and usable while a parcel loads or fails.
@@ -664,28 +636,50 @@ and its mailing address as of the transfer.
   and shared with the parcel page's labels. The route's loader prefetches it. The page
   shows the entry for its ID, or "Not found".
 - Land use also shows its type: `landUseTypeId` and `landUseTypeName`, as plain text.
+- Neighborhood also shows the definitions that use it (`neighborhoodDefinitionIds`),
+  each as plain text labeled with its name from the definitions query. Definitions have
+  no page.
 - **No reverse links** in the MVP, such as "parcels with this land use". There's no RPC
   for them, and they need search or lists, which are out of scope.
 
-### Address (`/addresses/:addressId`) and party (`/parties/:partyId`)
+### Address (`/addresses/:addressId`)
 
-These depend on civil-os `docs/address-party-read-api`. Until that feature ships in a
-released SDK, each page shows:
+**Data:** `AddressesService/GetAddressesById` with `addressIds: [addressId]`, prefetched
+by the route's loader.
 
-- the ID;
-- "Address and party records aren't available from Civil OS yet";
-- a Back link.
+**Fields:** every `Address` field, in proto order.
 
-The routes and links exist from the start, so nothing that links to them changes later.
+- `administrativeArea` and `country` show as "name (code)".
+- `coordinates` shows as "latitude, longitude", as plain text. The map stays on the
+  parcels page.
 
-Once the RPCs ship:
+**Sections:** each one is a paginated list (`first: 25`, "More" via `useInfiniteQuery`
+with `after`), loaded on its own like the parcel's transfers:
 
-| Page | Shows | Links |
+| Section | RPC | Each row |
 |---|---|---|
-| Address | The address parts | Each record that references the address |
-| Party | Name and mailing address (linked to `/addresses/:id`) | The party's parcels, each with its `ownershipShare` and a link, paginated like transfers |
+| Parcels at this address | `AddressesService/GetParcelsByAddressId` | A link to `/parcels/:parcelId` |
+| Improvements at this address | `AddressesService/GetImprovementsByAddressId` | The improvement ID as plain text, then a link to each of its `parcelIds` |
+| Parties using this as their mailing address | `AddressesService/GetPartiesByAddressId` | A link to `/parties/:partyId`, labeled with the party's `name` |
 
-These pages are specced in detail once the civil-os spec names the RPCs and messages.
+**Not found:** an ID missing from `addresses` shows "No address with this ID".
+
+### Party (`/parties/:partyId`)
+
+**Data:** `PartiesService/GetPartiesById` with `partyIds: [partyId]`, prefetched by the
+route's loader.
+
+**Fields:** `name`, then the mailing address: `mailingAddress` as text, linked to
+`/addresses/:mailingAddressId` when `mailingAddressId` is set.
+
+**Sections,** paginated as on the address page:
+
+| Section | RPC | Each row |
+|---|---|---|
+| Parcels | `PartiesService/GetParcelsByPartyId` | A link to `/parcels/:parcelId`, then `ownershipShare` |
+| Transfers | `RealPropertyTransfersService/GetTransfersByPartyId` with `partyIds: [partyId]` | Time, amount, and a link to `/transfers/:id`, as on the parcel pane |
+
+**Not found:** an ID missing from `parties` shows "No party with this ID".
 
 ## Styling
 
@@ -834,8 +828,4 @@ src/
 
 ## Open questions
 
-- **Neighborhoods after the civil-os fix.** `docs/neighborhoods-api-fixes/intent.md`
-  plans to change `GetNeighborhoodDefinitionsResponse` to a map of
-  `NeighborhoodDefinition`, possibly under a new field name. When the SDK is upgraded,
-  the selector's code fails type-checking until it reads the new field. That's
-  intended. The selector still uses only each definition's ID and name.
+None. The questions raised while drafting were settled before planning.
