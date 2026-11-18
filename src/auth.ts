@@ -3,6 +3,12 @@
 // The gateway authenticates requests with the ID token, so a session is valid
 // exactly as long as its ID token is unexpired. Everything here is judged by
 // the ID token's own `exp` claim, not by the access token's expiry.
+//
+// Renewal (spec: Session renewal) uses the refresh token only, and only when
+// the IdP issued one. oidc-client-ts's automaticSilentRenew is off: without a
+// refresh token it falls back to an iframe renew against redirect_uri, which
+// the spec rules out. A refresh response with no id_token keeps the old one,
+// so it doesn't make the session valid again; the ID token's exp decides.
 import {
   UserManager,
   WebStorageStateStore,
@@ -80,6 +86,8 @@ export function userManagerSettings(
     scope: 'openid profile email offline_access',
     // localStorage, so a session survives new tabs and browser restarts.
     userStore: new WebStorageStateStore({ store: storage }),
+    // Renewal is done by Auth, with the refresh token only (see above).
+    automaticSilentRenew: false,
   }
 }
 
@@ -94,12 +102,33 @@ function navigatingAway(): Promise<never> {
   return new Promise<never>(() => {})
 }
 
-export class Auth {
-  readonly userManager: UserManager
-  private redirecting = false
+/** The parts of oidc-client-ts's UserManager that Auth uses. */
+export type UserManagerLike = Pick<
+  UserManager,
+  | 'events'
+  | 'getUser'
+  | 'removeUser'
+  | 'settings'
+  | 'signinCallback'
+  | 'signinRedirect'
+  | 'signinSilent'
+>
 
-  constructor(userManager: UserManager) {
+export class Auth {
+  readonly userManager: UserManagerLike
+  private redirecting = false
+  private renewal: Promise<void> | null = null
+  private user: User | null = null
+  private readonly listeners = new Set<() => void>()
+
+  constructor(userManager: UserManagerLike) {
     this.userManager = userManager
+    const { events } = userManager
+    events.addUserLoaded((user) => this.setUser(user))
+    events.addUserUnloaded(() => this.setUser(null))
+    // Fires shortly before the access token expires. Dex gives the access and
+    // ID tokens the same lifetime, so this is the time to renew both.
+    events.addAccessTokenExpiring(() => void this.renew())
   }
 
   static create(authority: string, clientId: string): Auth {
@@ -115,13 +144,89 @@ export class Auth {
     )
   }
 
+  /** The localStorage key oidc-client-ts stores the user under. */
+  get userStorageKey(): string {
+    const { authority, client_id } = this.userManager.settings
+    return `oidc.user:${authority}:${client_id}`
+  }
+
+  /**
+   * Loads the stored user and starts listening to other tabs. Call once at
+   * startup, before rendering.
+   */
+  async start(win: Window = window): Promise<void> {
+    // getUser also arms the expiry timers for a stored user.
+    this.setUser(await this.userManager.getUser())
+    win.addEventListener('storage', (event) => void this.onStorage(event))
+  }
+
+  /** For useSyncExternalStore: the signed-in user, or null. */
+  readonly subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
+
+  readonly getUser = (): User | null => this.user
+
+  private setUser(user: User | null) {
+    if (user === this.user) return
+    this.user = user
+    for (const listener of this.listeners) listener()
+  }
+
+  /**
+   * Another tab changed the stored user. All tabs share one stored user
+   * (spec: Session renewal), so follow it: a renewal elsewhere is picked up,
+   * and a sign-out elsewhere sends this tab to sign-in too.
+   */
+  private async onStorage(event: StorageEvent): Promise<void> {
+    if (event.key !== this.userStorageKey && event.key !== null) return
+    // getUser(true) re-reads storage, re-arms the expiry timers, and raises
+    // userLoaded, which updates this.user.
+    const user = await this.userManager.getUser(true)
+    if (user === null) {
+      this.setUser(null)
+      await this.signIn(currentPath())
+    }
+  }
+
   /**
    * The ID token to send to the gateway, or null if there's no valid session.
+   *
    * It reads the stored user each time, so a token another tab stored is used.
+   * If the ID token has expired and there's a refresh token, it renews once and
+   * reads the stored user again: if this tab's renewal failed because another
+   * tab had already rotated the refresh token, that tab's result is used.
    */
   async getIdToken(): Promise<string | null> {
-    const user = await this.userManager.getUser()
+    let user = await this.userManager.getUser()
+    if (hasValidIdToken(user)) return user.id_token
+    if (!user?.refresh_token) return null
+    await this.renew()
+    user = await this.userManager.getUser()
     return hasValidIdToken(user) ? user.id_token : null
+  }
+
+  /**
+   * Renews with the refresh token, if the stored user has one. Concurrent
+   * calls share one request. A failure is logged and left for getIdToken to
+   * judge, after re-reading the stored user.
+   */
+  renew(): Promise<void> {
+    this.renewal ??= this.refresh().finally(() => {
+      this.renewal = null
+    })
+    return this.renewal
+  }
+
+  private async refresh(): Promise<void> {
+    const user = await this.userManager.getUser()
+    if (!user?.refresh_token) return
+    try {
+      await this.userManager.signinSilent()
+    } catch (error) {
+      console.warn('Session renewal failed', error)
+    }
   }
 
   /**

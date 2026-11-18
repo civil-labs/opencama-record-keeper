@@ -22,6 +22,7 @@ async function start() {
   const config = await loadConfig()
   const instance = await fetchInstanceMetadata(config.gatewayUrl)
   const auth = Auth.create(instance.authIssuerUrl, config.clientId)
+  await auth.start()
   const router = createAppRouter({ auth })
   render(<RouterProvider router={router} />)
 }
