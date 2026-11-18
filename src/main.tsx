@@ -1,8 +1,8 @@
 import './stylex.css'
 import { TransportProvider } from '@connectrpc/connect-query'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { RouterProvider } from '@tanstack/react-router'
-import { lazy, StrictMode, Suspense, type ReactNode } from 'react'
+import { RouterProvider, type AnyRouter } from '@tanstack/react-router'
+import { lazy, StrictMode, Suspense, type ComponentType, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { fetchInstanceMetadata } from './api/instance.ts'
 import { createQueryClient } from './api/queryClient.ts'
@@ -13,8 +13,14 @@ import { loadConfig } from './config.ts'
 import { createAppRouter } from './router.tsx'
 
 // Dev builds only: import.meta.env.DEV is false in production, so the import
-// and the devtools packages are dropped from the bundle.
-const Devtools = import.meta.env.DEV ? lazy(() => import('./Devtools.tsx')) : null
+// and the devtools packages are dropped from the bundle. If the import fails,
+// as it does when the first load redirects to sign-in mid-import, render
+// nothing rather than reporting an error.
+const Devtools = import.meta.env.DEV
+  ? lazy<ComponentType<{ router: AnyRouter }>>(() =>
+      import('./Devtools.tsx').catch(() => ({ default: () => null })),
+    )
+  : null
 
 const container = document.getElementById('root')
 if (!container) throw new Error('missing #root element')
