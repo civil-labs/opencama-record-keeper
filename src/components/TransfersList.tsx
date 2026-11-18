@@ -1,66 +1,43 @@
-// A paginated list of real property transfers (spec: Transfers section),
+// A paginated table of real property transfers (spec: Transfers section),
 // shared by the parcel pane and the party page.
 import {
   RealPropertyTransfersService,
-  type RealPropertyTransferEdge,
+  type RealPropertyTransfer,
 } from '@civil-labs/civil-os-api'
+import type { ConnectError } from '@connectrpc/connect'
 import { useInfiniteQuery } from '@connectrpc/connect-query'
 import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query'
 import { RecordLink } from '../links.tsx'
-import { ErrorAlert } from './ErrorAlert.tsx'
 import { formatTimestamp } from './Fields.tsx'
-
-/** Transfers fetched per page. */
-export const TRANSFERS_PAGE_SIZE = 25
-
-interface TransfersPage {
-  edges: RealPropertyTransferEdge[]
-  pageInfo?: { hasNextPage: boolean; endCursor?: string }
-}
-
-/** The next page's cursor, or undefined when there's no next page. */
-export function nextTransfersCursor(page: TransfersPage): string | undefined {
-  return page.pageInfo?.hasNextPage ? page.pageInfo.endCursor : undefined
-}
-
-/**
- * The first page's `after`: unset. Connect-Query types the page-param field
- * as a required string, but the gateway rejects an empty cursor
- * (`string.min_len`), and protobuf-es leaves an undefined field out of the
- * request. So the first page passes undefined, through this one cast.
- */
-export const FIRST_PAGE = undefined as unknown as string
+import { FIRST_PAGE, PAGE_SIZE, PagedList, pagedOptions, type Page } from './PagedList.tsx'
 
 /** A parcel's transfers, a page at a time. Loaded pages stay cached. */
 export function useTransfersByParcel(parcelId: string) {
   return useInfiniteQuery(
     RealPropertyTransfersService.method.getTransfersByParcelId,
-    { parcelIds: [parcelId], first: TRANSFERS_PAGE_SIZE, after: FIRST_PAGE },
-    { pageParamKey: 'after', getNextPageParam: nextTransfersCursor },
+    { parcelIds: [parcelId], first: PAGE_SIZE, after: FIRST_PAGE },
+    pagedOptions,
   )
 }
 
-/**
- * A table of time, amount and a link to each transfer, with "More" while
- * there's a next page. It loads and fails on its own; the page around it stays.
- */
+/** A party's transfers, as grantor or grantee, a page at a time. */
+export function useTransfersByParty(partyId: string) {
+  return useInfiniteQuery(
+    RealPropertyTransfersService.method.getTransfersByPartyId,
+    { partyIds: [partyId], first: PAGE_SIZE, after: FIRST_PAGE },
+    pagedOptions,
+  )
+}
+
+/** Time, amount and a link to each transfer, with "More" while there's a next page. */
 export function TransfersList({
   query,
 }: {
-  query: UseInfiniteQueryResult<InfiniteData<TransfersPage>>
+  query: UseInfiniteQueryResult<InfiniteData<Page<RealPropertyTransfer>>, ConnectError>
 }) {
-  if (query.isPending) return <p>Loading…</p>
-  // A failed first page has no data. A failed "More" keeps the pages already
-  // loaded, and shows its error below them.
-  if (!query.data) return <ErrorAlert error={query.error} />
-  const transfers = query.data.pages.flatMap((page) =>
-    page.edges.flatMap((edge) => (edge.node ? [edge.node] : [])),
-  )
   return (
-    <>
-      {transfers.length === 0 ? (
-        <p>None.</p>
-      ) : (
+    <PagedList query={query}>
+      {(transfers) => (
         <table>
           <thead>
             <tr>
@@ -82,16 +59,6 @@ export function TransfersList({
           </tbody>
         </table>
       )}
-      {query.isFetchNextPageError && <ErrorAlert error={query.error} />}
-      {query.hasNextPage && (
-        <button
-          type="button"
-          disabled={query.isFetchingNextPage}
-          onClick={() => void query.fetchNextPage()}
-        >
-          {query.isFetchingNextPage ? 'Loading…' : 'More'}
-        </button>
-      )}
-    </>
+    </PagedList>
   )
 }
