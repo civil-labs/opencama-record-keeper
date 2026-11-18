@@ -14,10 +14,16 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router'
 import type { InstanceMetadata } from './api/instance.ts'
-import { landUsesQuery, neighborhoodsQuery, zoningQuery } from './api/lookups.ts'
+import {
+  landUsesQuery,
+  neighborhoodDefinitionsQuery,
+  neighborhoodsQuery,
+  zoningQuery,
+} from './api/lookups.ts'
 import { parcelExtentQuery, parcelQuery } from './api/parcels.ts'
 import type { Auth } from './auth.ts'
 import type { Config } from './config.ts'
+import type { DefinitionChoice } from './neighborhoodDefinition.ts'
 import { Navbar } from './components/Navbar.tsx'
 import { RouteError } from './components/RouteError.tsx'
 import { Callback, CallbackError } from './routes/Callback.tsx'
@@ -36,6 +42,8 @@ export interface RouterContext {
   transport: Transport
   /** The one query cache, shared by loaders and pages. */
   queryClient: QueryClient
+  /** The user's chosen neighborhood definition. */
+  definitionChoice: DefinitionChoice
 }
 
 const styles = stylex.create({
@@ -91,6 +99,14 @@ const appRoute = createRoute({
     const token = await context.auth.getIdToken()
     if (token === null) await context.auth.signIn(location.href)
   },
+  /**
+   * The neighborhood definitions, once per app load (cached for good), for
+   * the parcels page's selector and the parcel reads. It needs a token, so it
+   * runs after the auth check. A failure doesn't stop the app: the selector
+   * shows the error, and parcels are read with no definition.
+   */
+  loader: ({ context: { queryClient, transport } }) =>
+    queryClient.prefetchQuery(neighborhoodDefinitionsQuery(transport)),
   component: function AppLayout() {
     const { auth } = useRouteContext({ from: '/app' })
     const fullBleed = useMatches({

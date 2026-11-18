@@ -7,6 +7,7 @@ import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
 import { act, render } from '@testing-library/react'
 import { vi } from 'vitest'
 import type { Auth } from '../auth.ts'
+import { DefinitionChoice } from '../neighborhoodDefinition.ts'
 import { createAppRouter } from '../router.tsx'
 
 export function signedInAuth(): Auth {
@@ -36,6 +37,11 @@ export function noCallsTransport(): { transport: Transport; calls: string[] } {
   return { transport, calls }
 }
 
+/** Calls other than the definitions every signed-in page loads on app load. */
+export function recordCalls(calls: readonly string[]): string[] {
+  return calls.filter((call) => !call.endsWith('/GetNeighborhoodDefinitions'))
+}
+
 export async function renderApp(
   path: string,
   transport: Transport = noCallsTransport().transport,
@@ -58,6 +64,7 @@ export async function renderApp(
       auth: signedInAuth(),
       transport,
       queryClient,
+      definitionChoice: new DefinitionChoice(null),
     },
     history,
   )

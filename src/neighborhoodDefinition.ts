@@ -3,6 +3,11 @@
 // localStorage so it survives reloads and new tabs, and followed across tabs.
 // Not in the URL: the parcel URL stays the record's shareable identity.
 
+import type { GetNeighborhoodDefinitionsResponse } from '@civil-labs/civil-os-api'
+import type { Transport } from '@connectrpc/connect'
+import type { QueryClient } from '@tanstack/react-query'
+import { neighborhoodDefinitionsQuery } from './api/lookups.ts'
+
 export const STORAGE_KEY = 'recordKeeper.neighborhoodDefinitionId'
 
 /** The part of localStorage the store uses. */
@@ -99,4 +104,20 @@ export class DefinitionChoice {
   private notify() {
     for (const listener of this.listeners) listener()
   }
+}
+
+/**
+ * The definition parcels are read under right now, for loaders and other
+ * code outside React: the stored choice applied to the cached definitions.
+ * Undefined when the definitions failed to load or there are none.
+ */
+export function currentDefinitionId(
+  queryClient: QueryClient,
+  transport: Transport,
+  choice: DefinitionChoice,
+): string | undefined {
+  const data = queryClient.getQueryData<GetNeighborhoodDefinitionsResponse>(
+    neighborhoodDefinitionsQuery(transport).queryKey,
+  )
+  return selectDefinition(choice.get(), data?.neighborhoodDefinitions)
 }

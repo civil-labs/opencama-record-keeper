@@ -37,6 +37,8 @@ export interface FakeCalls {
 export function fakeCivilOs(
   options: {
     transfers?: number
+    /** The definitions call fails, or returns none. */
+    definitions?: 'fail' | 'none'
     /** Make every transfers page after the first fail. */
     failNextTransfersPage?: boolean
     register?: (router: ConnectRouter) => void
@@ -69,12 +71,19 @@ export function fakeCivilOs(
           },
         },
       }),
-      getNeighborhoodDefinitions: () => ({
-        neighborhoodDefinitions: {
-          [IDS.definitionA]: { id: IDS.definitionA, name: 'Fixture districts' },
-          [IDS.definitionB]: { id: IDS.definitionB, name: 'Fixture market areas' },
-        },
-      }),
+      getNeighborhoodDefinitions: () => {
+        record('getNeighborhoodDefinitions', {})
+        if (options.definitions === 'fail') throw new ConnectError('reader down', Code.Unavailable)
+        const neighborhoodDefinitions: Record<string, { id: string; name: string }> = {}
+        if (options.definitions !== 'none') {
+          neighborhoodDefinitions[IDS.definitionA] = { id: IDS.definitionA, name: 'Fixture districts' }
+          neighborhoodDefinitions[IDS.definitionB] = {
+            id: IDS.definitionB,
+            name: 'Fixture market areas',
+          }
+        }
+        return { neighborhoodDefinitions }
+      },
     })
     router.service(ParcelsService, {
       getParcelsWithImprovementSummaryByParcelId: (req) => {
