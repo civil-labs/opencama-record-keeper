@@ -34,7 +34,7 @@ async function start() {
   await auth.start()
   const transport = createTransport(config.gatewayUrl, auth)
   const queryClient = createQueryClient(auth)
-  const router = createAppRouter({ auth, transport, queryClient })
+  const router = createAppRouter({ config, instance, auth, transport, queryClient })
   render(
     <TransportProvider transport={transport}>
       <QueryClientProvider client={queryClient}>

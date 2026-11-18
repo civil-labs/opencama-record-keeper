@@ -28,8 +28,15 @@ describe('routes', () => {
     expect(await screen.findByText('Parcel details: not built yet.')).toBeDefined()
   })
 
+  test('/parcels/not-a-uuid says so in the pane, without an API call', async () => {
+    const { transport, calls } = noCallsTransport()
+    await renderApp('/parcels/not-a-uuid', transport)
+    expect(await screen.findByText('No parcel with this ID.')).toBeDefined()
+    expect(screen.getByRole('region', { name: 'Parcel details' })).toBeDefined()
+    expect(calls).toEqual([])
+  })
+
   test.each([
-    '/parcels/not-a-uuid',
     '/addresses/not-a-uuid',
     '/parties/not-a-uuid',
     '/transfers/not-a-uuid',
