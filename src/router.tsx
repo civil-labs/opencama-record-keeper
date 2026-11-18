@@ -1,23 +1,33 @@
 // Every route, in one place (spec: Routes, Router setup).
 import type { Transport } from '@connectrpc/connect'
 import * as stylex from '@stylexjs/stylex'
+import type { QueryClient } from '@tanstack/react-query'
 import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
+  notFound,
   Outlet,
   redirect,
   useRouteContext,
+  type RouterHistory,
 } from '@tanstack/react-router'
+import { landUsesQuery, neighborhoodsQuery, zoningQuery } from './api/lookups.ts'
 import type { Auth } from './auth.ts'
 import { Navbar } from './components/Navbar.tsx'
+import { RouteError } from './components/RouteError.tsx'
 import { Callback, CallbackError } from './routes/Callback.tsx'
+import { LandUsePage, NeighborhoodPage, ZoningPage } from './routes/LookupPage.tsx'
+import { NotBuiltYet } from './routes/NotBuiltYet.tsx'
+import { NotFound } from './routes/NotFound.tsx'
 import { spacing } from './theme/tokens.stylex.ts'
 
 export interface RouterContext {
   auth: Auth
   /** The authenticated Connect transport, for loaders. */
   transport: Transport
+  /** The one query cache, shared by loaders and pages. */
+  queryClient: QueryClient
 }
 
 const styles = stylex.create({
@@ -88,21 +98,162 @@ const indexRoute = createRoute({
   },
 })
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Record IDs in paths are public UUIDs. Anything else is "Not found", without
+ * calling the API. IDs are lowercased, the form the API returns.
+ */
+export function parseUuid(value: string): string {
+  if (!UUID.test(value)) throw notFound()
+  return value.toLowerCase()
+}
+
+/**
+ * The parcels page: the map in the left pane, and the selected parcel (or
+ * nothing) in the right. Because the map belongs to this layout, it stays
+ * mounted when the selection changes.
+ */
 const parcelsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'parcels',
-  component: function ParcelsPlaceholder() {
-    return <h1>Parcels</h1>
+  component: function ParcelsLayout() {
+    return (
+      <>
+        <NotBuiltYet page="Parcels map" />
+        <Outlet />
+      </>
+    )
   },
+})
+
+const parcelsIndexRoute = createRoute({
+  getParentRoute: () => parcelsRoute,
+  path: '/',
+})
+
+const parcelRoute = createRoute({
+  getParentRoute: () => parcelsRoute,
+  path: '$parcelId',
+  params: {
+    parse: ({ parcelId }) => ({ parcelId: parseUuid(parcelId) }),
+    stringify: ({ parcelId }) => ({ parcelId }),
+  },
+  component: () => <NotBuiltYet page="Parcel details" />,
+})
+
+const addressRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'addresses/$addressId',
+  params: {
+    parse: ({ addressId }) => ({ addressId: parseUuid(addressId) }),
+    stringify: ({ addressId }) => ({ addressId }),
+  },
+  component: () => <NotBuiltYet page="Address" />,
+})
+
+const partyRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'parties/$partyId',
+  params: {
+    parse: ({ partyId }) => ({ partyId: parseUuid(partyId) }),
+    stringify: ({ partyId }) => ({ partyId }),
+  },
+  component: () => <NotBuiltYet page="Party" />,
+})
+
+const transferRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'transfers/$transferId',
+  params: {
+    parse: ({ transferId }) => ({ transferId: parseUuid(transferId) }),
+    stringify: ({ transferId }) => ({ transferId }),
+  },
+  component: () => <NotBuiltYet page="Transfer" />,
+})
+
+const landUseRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'land-uses/$landUseId',
+  params: {
+    parse: ({ landUseId }) => ({ landUseId: parseUuid(landUseId) }),
+    stringify: ({ landUseId }) => ({ landUseId }),
+  },
+  loader: async ({ context: { queryClient, transport }, params }) => {
+    const data = await queryClient.ensureQueryData(landUsesQuery(transport))
+    if (!(params.landUseId in data.landUses)) throw notFound()
+  },
+  component: LandUsePage,
+})
+
+const zoningRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'zoning/$zoningId',
+  params: {
+    parse: ({ zoningId }) => ({ zoningId: parseUuid(zoningId) }),
+    stringify: ({ zoningId }) => ({ zoningId }),
+  },
+  loader: async ({ context: { queryClient, transport }, params }) => {
+    const data = await queryClient.ensureQueryData(zoningQuery(transport))
+    if (!(params.zoningId in data.zoning)) throw notFound()
+  },
+  component: ZoningPage,
+})
+
+const neighborhoodRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'neighborhoods/$neighborhoodId',
+  params: {
+    parse: ({ neighborhoodId }) => ({
+      neighborhoodId: parseUuid(neighborhoodId),
+    }),
+    stringify: ({ neighborhoodId }) => ({ neighborhoodId }),
+  },
+  loader: async ({ context: { queryClient, transport }, params }) => {
+    const data = await queryClient.ensureQueryData(neighborhoodsQuery(transport))
+    if (!(params.neighborhoodId in data.neighborhoods)) throw notFound()
+  },
+  component: NeighborhoodPage,
+})
+
+/**
+ * Any other path, signed in, under the navbar. Without it an unknown path
+ * would match only the root route, outside the auth check and the navbar.
+ */
+const notFoundRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '$',
+  component: NotFound,
 })
 
 const routeTree = rootRoute.addChildren([
   callbackRoute,
-  appRoute.addChildren([indexRoute, parcelsRoute]),
+  appRoute.addChildren([
+    indexRoute,
+    parcelsRoute.addChildren([parcelsIndexRoute, parcelRoute]),
+    addressRoute,
+    partyRoute,
+    transferRoute,
+    landUseRoute,
+    zoningRoute,
+    neighborhoodRoute,
+    notFoundRoute,
+  ]),
 ])
 
-export function createAppRouter(context: RouterContext) {
-  return createRouter({ routeTree, context })
+export function createAppRouter(context: RouterContext, history?: RouterHistory) {
+  return createRouter({
+    routeTree,
+    context,
+    history,
+    // Hovering a link starts loading that record.
+    defaultPreload: 'intent',
+    // TanStack Query alone decides whether data is fresh.
+    defaultPreloadStaleTime: 0,
+    defaultPendingComponent: () => <p>Loading…</p>,
+    defaultErrorComponent: RouteError,
+    defaultNotFoundComponent: NotFound,
+  })
 }
 
 declare module '@tanstack/react-router' {

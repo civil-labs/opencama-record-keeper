@@ -244,7 +244,11 @@ Connect-Query v2 accepts protobuf-es v2 method descriptors directly, without the
 - Its `@bufbuild/protobuf` dependency (`^2.11.0`) satisfies Connect-Query's peer
   dependency (`@bufbuild/protobuf` `2.x`).
 
-What remains is checked by the first real query against the local stack, in the plan.
+Confirmed against the local stack (2026-11-18): the lookup pages fetch through
+Connect-Query with the SDK's descriptors, and the loader's `ensureQueryData` and the
+page's `useSuspenseQuery` share one cache entry (one request per page). An `int64`
+input also builds a working query key: Connect-Query keys use the input's protobuf
+JSON, where `int64` is a string.
 
 ## Routes
 
@@ -768,6 +772,7 @@ src/
     transport.ts     # createConnectTransport with the interceptor
     queryClient.ts   # QueryClient defaults: cache policy, retry policy, Unauthenticated handler
     instance.ts      # the one plain call made before auth: GetInstanceMetadata
+    lookups.ts       # query options for the whole-table lookups, shared by loaders and pages
   links.tsx          # <RecordLink>, its type-to-route table, feature-id bigint/number helpers
   neighborhoodDefinition.ts  # selected definition: memory + localStorage store, default rule
   theme/
