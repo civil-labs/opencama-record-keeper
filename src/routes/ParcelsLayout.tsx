@@ -3,6 +3,7 @@
 // it stays mounted while the selection, a child route, changes.
 import * as stylex from '@stylexjs/stylex'
 import { Outlet } from '@tanstack/react-router'
+import { ParcelMap } from '../map/ParcelMap.tsx'
 import { sizes, spacing } from '../theme/tokens.stylex.ts'
 
 const styles = stylex.create({
@@ -26,7 +27,9 @@ const styles = stylex.create({
 export function ParcelsLayout() {
   return (
     <div {...stylex.props(styles.grid)}>
-      <div {...stylex.props(styles.map)} />
+      <div {...stylex.props(styles.map)}>
+        <ParcelMap />
+      </div>
       <section aria-label="Parcel details" {...stylex.props(styles.pane)}>
         <Outlet />
       </section>
