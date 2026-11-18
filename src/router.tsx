@@ -14,6 +14,7 @@ import {
 } from '@tanstack/react-router'
 import type { Auth } from './auth.ts'
 import { Navbar } from './components/Navbar.tsx'
+import { RouteError } from './components/RouteError.tsx'
 import { Callback, CallbackError } from './routes/Callback.tsx'
 import { NotBuiltYet } from './routes/NotBuiltYet.tsx'
 import { NotFound } from './routes/NotFound.tsx'
@@ -236,6 +237,7 @@ export function createAppRouter(context: RouterContext, history?: RouterHistory)
     // TanStack Query alone decides whether data is fresh.
     defaultPreloadStaleTime: 0,
     defaultPendingComponent: () => <p>Loading…</p>,
+    defaultErrorComponent: RouteError,
     defaultNotFoundComponent: NotFound,
   })
 }
