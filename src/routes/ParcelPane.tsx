@@ -3,12 +3,14 @@
 // lookups; this reads them from the cache.
 import type { ParcelDetails, ParcelImprovementsSummary } from '@civil-labs/civil-os-api'
 import { useTransport } from '@connectrpc/connect-query'
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { notFound, useParams } from '@tanstack/react-router'
 import { landUsesQuery, neighborhoodsQuery, zoningQuery } from '../api/lookups.ts'
 import { parcelQuery } from '../api/parcels.ts'
+import { ErrorAlert } from '../components/ErrorAlert.tsx'
 import { Fields, type Field } from '../components/Fields.tsx'
 import { TransfersList, useTransfersByParcel } from '../components/TransfersList.tsx'
+import { useNeighborhoodDefinition } from './NeighborhoodDefinitionSelect.tsx'
 
 /** A label for each ID that a lookup map knows, by its `name`. */
 function labels(map: Record<string, { name: string }> | undefined) {
@@ -22,6 +24,8 @@ function parcelFields(
     zoning: Record<string, string>
     neighborhoods: Record<string, string>
   },
+  /** The neighborhood is being read under a newly selected definition. */
+  neighborhoodLoading: boolean,
 ): Field[] {
   return [
     { label: 'Parcel ID', kind: 'text', value: parcel.parcelId },
@@ -45,13 +49,15 @@ function parcelFields(
       id: parcel.landUseId,
       text: parcel.landUseId && names.landUses[parcel.landUseId],
     },
-    {
-      label: 'Neighborhood',
-      kind: 'record',
-      type: 'neighborhood',
-      id: parcel.neighborhoodId,
-      text: parcel.neighborhoodId && names.neighborhoods[parcel.neighborhoodId],
-    },
+    neighborhoodLoading
+      ? { label: 'Neighborhood', kind: 'text', value: 'Loading…' }
+      : {
+          label: 'Neighborhood',
+          kind: 'record',
+          type: 'neighborhood',
+          id: parcel.neighborhoodId,
+          text: parcel.neighborhoodId && names.neighborhoods[parcel.neighborhoodId],
+        },
     { label: 'Land area (sq ft)', kind: 'text', value: parcel.landAreaSqFt },
     { label: 'Frontage (ft)', kind: 'text', value: parcel.frontageFt },
     { label: 'Depth (ft)', kind: 'text', value: parcel.depthFt },
@@ -114,13 +120,21 @@ function improvementFields(summary: ParcelImprovementsSummary | undefined): Fiel
 export function ParcelPane() {
   const { parcelId } = useParams({ from: '/app/parcels/$parcelId' })
   const transport = useTransport()
-  const { data } = useSuspenseQuery(parcelQuery(transport, parcelId))
+  const { definitionId } = useNeighborhoodDefinition()
+  // The loader fetched this under the same definition. A new definition is a
+  // new query: keep showing this parcel's previous result while it loads.
+  const query = useQuery({
+    ...parcelQuery(transport, parcelId, definitionId),
+    placeholderData: (previous) => (previous?.parcels[parcelId] ? previous : undefined),
+  })
   const landUses = useQuery(landUsesQuery(transport))
   const zoning = useQuery(zoningQuery(transport))
   const neighborhoods = useQuery(neighborhoodsQuery(transport))
 
-  const parcel = data.parcels[parcelId]
-  // A parcel the loader found can drop out of a later refetch (voided since).
+  if (query.isPending) return <p>Loading…</p>
+  if (query.isError) return <ErrorAlert error={query.error} />
+  const parcel = query.data.parcels[parcelId]
+  // A parcel the loader found can drop out of a later read (voided since).
   if (!parcel?.parcelDetails) throw notFound()
   const details = parcel.parcelDetails
 
@@ -133,7 +147,7 @@ export function ParcelPane() {
           landUses: labels(landUses.data?.landUses),
           zoning: labels(zoning.data?.zoning),
           neighborhoods: labels(neighborhoods.data?.neighborhoods),
-        })}
+        }, query.isPlaceholderData)}
       />
       <section>
         <h2>Improvements</h2>

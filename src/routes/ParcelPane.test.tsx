@@ -81,3 +81,44 @@ describe('transfers on the pane', () => {
     expect(await pane().findByText('None.')).toBeDefined()
   })
 })
+
+describe('the neighborhood definition', () => {
+  const neighborhood = () =>
+    pane().getByText('Neighborhood').parentElement?.querySelector('dd')?.textContent
+
+  test('changing it reads the parcel again under it, and nothing else', async () => {
+    const { transport, calls } = fakeCivilOs({ transfers: 1, parcelDelayMs: 50 })
+    await renderApp(`/parcels/${IDS.parcel}`, transport)
+    await pane().findByRole('link', { name: 'North Fixture' })
+    await pane().findAllByRole('link', { name: /^90000000-/ })
+
+    const select = pane().getByRole('combobox', { name: 'Neighborhood definition' })
+    fireEvent.change(select, { target: { value: IDS.definitionB } })
+    // The previous result stays, with only the neighborhood loading.
+    expect(neighborhood()).toBe('Loading…')
+    expect(pane().getByRole('heading', { name: /^Parcel:/ })).toBeDefined()
+    // The parcel has no neighborhood under the other definition.
+    await waitFor(() => expect(neighborhood()).toBe('—'))
+
+    // Switching back is served from the cache.
+    fireEvent.change(select, { target: { value: IDS.definitionA } })
+    expect(await pane().findByRole('link', { name: 'North Fixture' })).toBeDefined()
+
+    const reads = calls.filter((c) => c.method === 'getParcelsWithImprovementSummaryByParcelId')
+    expect(
+      reads.map((c) => (c.input as { neighborhoodDefinitionId?: string }).neighborhoodDefinitionId),
+    ).toEqual([IDS.definitionA, IDS.definitionB])
+    expect(calls.filter((c) => c.method === 'getTransfersByParcelId')).toHaveLength(1)
+    expect(calls.filter((c) => c.method === 'getLandUses')).toHaveLength(1)
+  })
+
+  test('no definitions: the parcel is read with none', async () => {
+    const { transport, calls } = fakeCivilOs({ definitions: 'none' })
+    await renderApp(`/parcels/${IDS.parcel}`, transport)
+    await pane().findByRole('heading', { name: /^Parcel:/ })
+    expect(neighborhood()).toBe('—')
+    const read = calls.find((c) => c.method === 'getParcelsWithImprovementSummaryByParcelId')
+    expect(read).toBeDefined()
+    expect((read?.input as { neighborhoodDefinitionId?: string }).neighborhoodDefinitionId).toBeUndefined()
+  })
+})

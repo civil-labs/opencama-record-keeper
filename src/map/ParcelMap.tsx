@@ -23,6 +23,7 @@ import {
 import { currentPath } from '../auth.ts'
 import { ErrorAlert } from '../components/ErrorAlert.tsx'
 import { featureIdToBigInt, featureIdToNumber } from '../links.tsx'
+import { currentDefinitionId } from '../neighborhoodDefinition.ts'
 import {
   boundsFromExtent,
   boundsFromMetadata,
@@ -152,7 +153,9 @@ export function ParcelMap({ onNote }: { onNote: MapNote }) {
 }
 
 function MapView({ bounds, onNote }: { bounds: Bounds; onNote: MapNote }) {
-  const { config, auth, queryClient, instance } = useRouteContext({ from: '/app/parcels' })
+  const { config, auth, queryClient, instance, definitionChoice } = useRouteContext({
+    from: '/app/parcels',
+  })
   const transport = useTransport()
   const navigate = useNavigate()
   const { parcelId } = useParams({ strict: false })
@@ -286,10 +289,14 @@ function MapView({ bounds, onNote }: { bounds: Bounds; onNote: MapNote }) {
 
     async function select(parcelId: string) {
       // The same query as the pane, so no extra request. If it fails, the pane
-      // shows why; the map just has nothing to show.
+      // shows why; the map just has nothing to show. Read once per selection:
+      // the feature doesn't depend on the definition.
       let featureId: number | null = null
       try {
-        const { parcels } = await queryClient.fetchQuery(parcelQuery(transport, parcelId))
+        const definitionId = currentDefinitionId(queryClient, transport, definitionChoice)
+        const { parcels } = await queryClient.fetchQuery(
+          parcelQuery(transport, parcelId, definitionId),
+        )
         const id = parcels[parcelId]?.parcelDetails?.featureId
         featureId = id === undefined ? null : featureIdToNumber(id)
       } catch {
@@ -328,7 +335,7 @@ function MapView({ bounds, onNote }: { bounds: Bounds; onNote: MapNote }) {
       cancelled = true
       stopWaiting()
     }
-  }, [loadedMap, parcelId, queryClient, transport, instance.metadata])
+  }, [loadedMap, parcelId, queryClient, transport, instance.metadata, definitionChoice])
 
   return (
     <>

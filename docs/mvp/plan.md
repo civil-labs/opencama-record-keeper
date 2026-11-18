@@ -338,6 +338,20 @@ isn't remounted between `/parcels/A`, `/parcels/B` and `/parcels`.
    - `keepPreviousData`, with the neighborhood field showing "Loading…" while it
      refetches.
 
+**As built:**
+
+- The app route's loader uses `prefetchQuery`, not `ensureQueryData`, so a failed
+  definitions call leaves the app working, as the spec requires. The `$parcelId` loader
+  awaits the same request before choosing, since loaders run in parallel (spec updated).
+- The pane reads the parcel with `useQuery` and a same-parcel `placeholderData` (spec
+  updated): `useSuspenseQuery` would suspend on the new key, and `keepPreviousData`
+  would show the last parcel while another loads.
+- The store is in the router context as `definitionChoice`; `currentDefinitionId`
+  applies it to the cached definitions for loaders and the map.
+- `renderApp` now builds the app's own `createQueryClient` (retries off), so tests run
+  with the real cache policy. A plain client's `staleTime: 0` made the pane refetch what
+  the loader had just fetched.
+
 **Unit tests:** the store's default rule, throwing storage, and cross-tab updates;
 changing the definition refetches only the parcel query.
 

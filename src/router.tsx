@@ -23,7 +23,7 @@ import {
 import { parcelExtentQuery, parcelQuery } from './api/parcels.ts'
 import type { Auth } from './auth.ts'
 import type { Config } from './config.ts'
-import type { DefinitionChoice } from './neighborhoodDefinition.ts'
+import { currentDefinitionId, type DefinitionChoice } from './neighborhoodDefinition.ts'
 import { Navbar } from './components/Navbar.tsx'
 import { RouteError } from './components/RouteError.tsx'
 import { Callback, CallbackError } from './routes/Callback.tsx'
@@ -143,6 +143,19 @@ export function parseUuid(value: string): string {
 }
 
 /**
+ * The parcel under the selected neighborhood definition. Loaders run in
+ * parallel, so this waits for the app route's definitions request (shared,
+ * never thrown) before choosing; otherwise the parcel would be read with no
+ * definition, then again once they arrive.
+ */
+async function readParcel(context: RouterContext, parcelId: string) {
+  const { queryClient, transport, definitionChoice } = context
+  await queryClient.prefetchQuery(neighborhoodDefinitionsQuery(transport))
+  const definitionId = currentDefinitionId(queryClient, transport, definitionChoice)
+  return queryClient.ensureQueryData(parcelQuery(transport, parcelId, definitionId))
+}
+
+/**
  * The parcels page: the map in the left pane, and the selected parcel (or
  * nothing) in the right. Because the map belongs to this layout, it stays
  * mounted when the selection changes.
@@ -169,13 +182,15 @@ const parcelRoute = createRoute({
     stringify: ({ parcelId }) => ({ parcelId }),
   },
   /**
-   * Prefetches the parcel and the lookups its labels use, and starts its
-   * extent for the map, in parallel. Transfers load on their own.
+   * Prefetches the parcel under the selected neighborhood definition, and the
+   * lookups its labels use, and starts its extent for the map, in parallel.
+   * Transfers load on their own.
    */
-  loader: async ({ context: { queryClient, transport }, params: { parcelId } }) => {
+  loader: async ({ context, params: { parcelId } }) => {
+    const { queryClient, transport } = context
     void queryClient.prefetchQuery(parcelExtentQuery(transport, parcelId))
     const [parcel] = await Promise.all([
-      queryClient.ensureQueryData(parcelQuery(transport, parcelId)),
+      readParcel(context, parcelId),
       queryClient.ensureQueryData(landUsesQuery(transport)),
       queryClient.ensureQueryData(zoningQuery(transport)),
       queryClient.ensureQueryData(neighborhoodsQuery(transport)),

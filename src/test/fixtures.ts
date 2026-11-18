@@ -37,6 +37,8 @@ export interface FakeCalls {
 export function fakeCivilOs(
   options: {
     transfers?: number
+    /** Delay parcel reads, in milliseconds, to observe loading states. */
+    parcelDelayMs?: number
     /** The definitions call fails, or returns none. */
     definitions?: 'fail' | 'none'
     /** Make every transfers page after the first fail. */
@@ -86,8 +88,9 @@ export function fakeCivilOs(
       },
     })
     router.service(ParcelsService, {
-      getParcelsWithImprovementSummaryByParcelId: (req) => {
+      getParcelsWithImprovementSummaryByParcelId: async (req) => {
         record('getParcelsWithImprovementSummaryByParcelId', req)
+        if (options.parcelDelayMs) await new Promise((r) => setTimeout(r, options.parcelDelayMs))
         const parcels: Record<string, object> = {}
         for (const id of req.parcelIds) {
           if (id === IDS.parcel) {
