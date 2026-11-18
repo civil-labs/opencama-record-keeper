@@ -13,6 +13,7 @@ import {
   useRouteContext,
   type RouterHistory,
 } from '@tanstack/react-router'
+import { addressQuery } from './api/addresses.ts'
 import type { InstanceMetadata } from './api/instance.ts'
 import {
   landUsesQuery,
@@ -27,6 +28,7 @@ import type { Config } from './config.ts'
 import { currentDefinitionId, type DefinitionChoice } from './neighborhoodDefinition.ts'
 import { Navbar } from './components/Navbar.tsx'
 import { RouteError } from './components/RouteError.tsx'
+import { AddressPage } from './routes/AddressPage.tsx'
 import { Callback, CallbackError } from './routes/Callback.tsx'
 import { LandUsePage, NeighborhoodPage, ZoningPage } from './routes/LookupPage.tsx'
 import { NotBuiltYet } from './routes/NotBuiltYet.tsx'
@@ -211,7 +213,12 @@ const addressRoute = createRoute({
     parse: ({ addressId }) => ({ addressId: parseUuid(addressId) }),
     stringify: ({ addressId }) => ({ addressId }),
   },
-  component: () => <NotBuiltYet page="Address" />,
+  loader: async ({ context: { queryClient, transport }, params: { addressId } }) => {
+    const data = await queryClient.ensureQueryData(addressQuery(transport, addressId))
+    if (!(addressId in data.addresses)) throw notFound()
+  },
+  component: AddressPage,
+  notFoundComponent: () => <p>No address with this ID.</p>,
 })
 
 const partyRoute = createRoute({

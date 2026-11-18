@@ -25,8 +25,8 @@ describe('routes', () => {
   })
 
   test('a record route with a valid UUID renders its page', async () => {
-    await renderApp(`/addresses/${ID}`)
-    expect(await screen.findByText('Address: not built yet.')).toBeDefined()
+    await renderApp(`/parties/${ID}`)
+    expect(await screen.findByText('Party: not built yet.')).toBeDefined()
   })
 
   test('/parcels/not-a-uuid says so in the pane, without an API call', async () => {
@@ -38,7 +38,7 @@ describe('routes', () => {
   })
 
   test.each([
-    ['/addresses/not-a-uuid', 'Not found'],
+    ['/addresses/not-a-uuid', 'No address with this ID.'],
     ['/parties/not-a-uuid', 'Not found'],
     ['/transfers/not-a-uuid', 'No transfer with this ID.'],
     ['/land-uses/not-a-uuid', 'Not found'],

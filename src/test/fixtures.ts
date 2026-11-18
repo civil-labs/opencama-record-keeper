@@ -1,6 +1,7 @@
 // A fake Civil OS for page tests: a few lookups and parcels, served through a
 // Connect router transport. Synthetic data only.
 import {
+  AddressesService,
   LandUsesService,
   NeighborhoodService,
   ParcelsService,
@@ -43,6 +44,8 @@ export function fakeCivilOs(
     parcelDelayMs?: number
     /** The definitions call fails, or returns none. */
     definitions?: 'fail' | 'none'
+    /** The address page's parties section fails. */
+    failPartiesByAddress?: boolean
     /** Make every transfers page after the first fail. */
     failNextTransfersPage?: boolean
     register?: (router: ConnectRouter) => void
@@ -199,6 +202,54 @@ export function fakeCivilOs(
             hasPreviousPage: start > 0,
             endCursor: edges.length ? String(end) : undefined,
           },
+        }
+      },
+    })
+    router.service(AddressesService, {
+      getAddressesById: (req) => {
+        record('getAddressesById', req)
+        const addresses: Record<string, object> = {}
+        if (req.addressIds.includes(IDS.address)) {
+          addresses[IDS.address] = {
+            addressId: IDS.address,
+            formattedAddress: '2 Fixture Way, Testville ZZ000',
+            addressLine1: '2 Fixture Way',
+            locality: 'Testville',
+            postalCode: 'ZZ000',
+            administrativeArea: { code: 'ZZ-FX', name: 'Fixture Province' },
+            country: { code: 'ZZ', name: 'Testland' },
+            coordinates: { latitude: -39.9998, longitude: -139.9994 },
+          }
+        }
+        return { addresses }
+      },
+      getParcelsByAddressId: (req) => {
+        record('getParcelsByAddressId', req)
+        return {
+          edges: [{ cursor: 'p1', node: { parcelId: IDS.parcel, featureId: 1002n } }],
+          pageInfo: { hasNextPage: false },
+        }
+      },
+      getImprovementsByAddressId: (req) => {
+        record('getImprovementsByAddressId', req)
+        return {
+          edges: [
+            { cursor: 'i1', node: { improvementId: IDS.improvement, parcelIds: [IDS.parcel] } },
+          ],
+          pageInfo: { hasNextPage: false },
+        }
+      },
+      getPartiesByAddressId: (req) => {
+        record('getPartiesByAddressId', req)
+        if (options.failPartiesByAddress) throw new ConnectError('reader down', Code.Unavailable)
+        return {
+          edges: [
+            {
+              cursor: 'm1',
+              node: { partyId: IDS.partyA, name: 'Fixture Owner 2', mailingAddressId: IDS.address },
+            },
+          ],
+          pageInfo: { hasNextPage: false },
         }
       },
     })
