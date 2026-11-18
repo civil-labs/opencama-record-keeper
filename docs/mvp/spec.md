@@ -397,13 +397,15 @@ details are in a pane on the right.
     `ParcelsService/GetEstimatedParcelsExtentWGS84` and uses `minX, minY, maxX, maxY`.
   - If both fail, the map pane shows the error and no map. The detail pane still
     works.
-- `maxBounds` is the bounds, together with the view that fits them, expanded by 10% on
-  each side. The slack lets a parcel on the edge of the jurisdiction be centered.
-  - The fitted view is included because MapLibre keeps the whole viewport inside
-    `maxBounds`. With only the bounds padded, an instance whose shape differs from the
-    map pane's (a tall instance in a wide pane) forces a zoom-in, and the whole
-    instance can never be shown. It's set once the map has loaded and fitted the
-    bounds.
+- `maxBounds` is the bounds together with the view that fits them, extended on each
+  side by half that view's width and height. It's set once the map has loaded and
+  fitted the bounds. MapLibre keeps the whole viewport inside `maxBounds`, so:
+  - **The fitted view is included** so the whole instance can be shown. With only the
+    bounds padded, an instance whose shape differs from the map pane's (a tall instance
+    in a wide pane) forces a zoom-in.
+  - **The half-view margin** lets any point inside the bounds, such as a parcel on the
+    edge of the jurisdiction, be centered at the fitted zoom or closer. A fixed 10%
+    margin couldn't center an edge parcel at that zoom.
 - **With no parcel selected,** the map starts centered on the center of the bounds,
   zoomed so the whole bounds fit.
 - **With a parcel selected,** the map starts on that parcel (see [Selection](#selection)).
@@ -614,7 +616,9 @@ so the map stays visible and usable while a parcel loads or fails.
   `parcelIds: [parcelId]`, `first: 25`.
 - Shown as a table of time, amount and a link to `/transfers/:id`.
 - When `pageInfo.hasNextPage` is set, a "More" button fetches the next page with
-  `after: endCursor`, through `useInfiniteQuery`.
+  `after: endCursor`, through `useInfiniteQuery`. The first page leaves `after` unset:
+  the gateway rejects an empty cursor.
+- A failed "More" keeps the rows already loaded and shows its error below them.
 
 **Not found:** a parcel ID missing from the response map shows "No parcel with this ID"
 in the pane, since it may be voided or may not exist. Nothing is highlighted.
@@ -778,6 +782,7 @@ src/
     queryClient.ts   # QueryClient defaults: cache policy, retry policy, Unauthenticated handler
     instance.ts      # the one plain call made before auth: GetInstanceMetadata
     lookups.ts       # query options for the whole-table lookups, shared by loaders and pages
+    parcels.ts       # query options for parcels, their extents and feature lookups
   links.tsx          # <RecordLink>, its type-to-route table, feature-id bigint/number helpers
   neighborhoodDefinition.ts  # selected definition: memory + localStorage store, default rule
   theme/
@@ -785,7 +790,8 @@ src/
   map/
     ParcelMap.tsx    # MapLibre instance, layers, click → navigate, reacts to the selected ID
     style.ts         # parcel and highlight layer definitions, highlight color
-    bounds.ts        # choose bounds from metadata or extent; pad for maxBounds
+    bounds.ts        # choose bounds from metadata or extent; maxBounds
+    tiles.ts         # the parcel tile URL, transformRequest (token on gateway tiles only)
     selection.ts     # merge clipped feature boxes; choose the camera for a selection
   routes/
     ParcelsLayout.tsx  ParcelPane.tsx  NeighborhoodDefinitionSelect.tsx
@@ -793,6 +799,7 @@ src/
     AddressPage.tsx  PartyPage.tsx  Callback.tsx  NotFound.tsx
   components/
     Fields.tsx       # the <dl> renderer that follows the rendering rule
+    TransfersList.tsx  # paginated transfers table, shared by the parcel pane and party page
     ErrorAlert.tsx
     Navbar.tsx       # app name link, user's name, sign-out button, with its StyleX styles
 ```

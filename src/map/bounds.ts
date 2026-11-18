@@ -7,8 +7,6 @@ export type Bounds = [number, number, number, number]
 /** The fallback zoom when the metadata has no default_zoom (spec: Selection). */
 export const FALLBACK_DEFAULT_ZOOM = 17
 
-/** How much maxBounds extends past the bounds on each side. */
-export const MAX_BOUNDS_PADDING = 0.1
 
 /** Valid if every edge is a finite coordinate and the box has area. */
 export function isValidBounds(bounds: Bounds): boolean {
@@ -54,22 +52,6 @@ export function boundsFromExtent(extent: {
   return isValidBounds(result) ? result : null
 }
 
-/**
- * The bounds expanded by `fraction` of their width and height on each side,
- * so a parcel on the edge can still be centered. Clamped to the world.
- */
-export function padBounds(bounds: Bounds, fraction = MAX_BOUNDS_PADDING): Bounds {
-  const [west, south, east, north] = bounds
-  const dx = (east - west) * fraction
-  const dy = (north - south) * fraction
-  return [
-    Math.max(-180, west - dx),
-    Math.max(-90, south - dy),
-    Math.min(180, east + dx),
-    Math.min(90, north + dy),
-  ]
-}
-
 /** The smallest box containing both. */
 export function unionBounds(a: Bounds, b: Bounds): Bounds {
   return [
@@ -82,13 +64,24 @@ export function unionBounds(a: Bounds, b: Bounds): Bounds {
 
 /**
  * The map's maxBounds: the instance bounds together with the view that fits
- * them, padded by 10%. MapLibre keeps the whole viewport inside maxBounds, so
- * padding the bounds alone would force a zoom-in whenever the viewport's
- * shape differs from the instance's (a tall instance in a wide pane), and the
- * whole instance could never be shown.
+ * them, extended on each side by half that view's width and height.
+ *
+ * MapLibre keeps the whole viewport inside maxBounds. Including the fitted
+ * view lets the whole instance be shown even when its shape differs from the
+ * pane's (a tall instance in a wide pane). The half-view margin lets any point
+ * inside the bounds, such as a parcel on the edge, be centered at that zoom or
+ * closer. Clamped to the world.
  */
 export function maxBoundsFor(bounds: Bounds, fittedView: Bounds): Bounds {
-  return padBounds(unionBounds(bounds, fittedView))
+  const [west, south, east, north] = unionBounds(bounds, fittedView)
+  const dx = (fittedView[2] - fittedView[0]) / 2
+  const dy = (fittedView[3] - fittedView[1]) / 2
+  return [
+    Math.max(-180, west - dx),
+    Math.max(-90, south - dy),
+    Math.min(180, east + dx),
+    Math.min(90, north + dy),
+  ]
 }
 
 /** `metadata.default_zoom`, if it's a usable zoom level. */

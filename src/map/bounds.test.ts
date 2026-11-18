@@ -5,7 +5,6 @@ import {
   defaultZoomFromMetadata,
   FALLBACK_DEFAULT_ZOOM,
   maxBoundsFor,
-  padBounds,
   type Bounds,
 } from './bounds.ts'
 
@@ -39,24 +38,22 @@ describe('boundsFromExtent', () => {
   })
 })
 
-describe('padBounds', () => {
-  test('adds 10% on each side', () => {
-    expect(padBounds([0, 0, 10, 20])).toEqual([-1, -2, 11, 22])
-  })
-  test('clamps to the world', () => {
-    expect(padBounds([-180, -90, 180, 90])).toEqual([-180, -90, 180, 90])
-  })
-})
-
 describe('maxBoundsFor', () => {
-  test('covers the fitted view, so a wide view of a tall instance fits', () => {
+  test('covers the fitted view, plus half of it on each side', () => {
     // A tall instance, 1 wide and 2 high, fitted in a view twice as wide as high.
     const bounds: Bounds = [0, 0, 1, 2]
     const fittedView: Bounds = [-1.5, 0, 2.5, 2]
-    expect(maxBoundsFor(bounds, fittedView)).toEqual([-1.9, -0.2, 2.9, 2.2])
+    expect(maxBoundsFor(bounds, fittedView)).toEqual([-3.5, -1, 4.5, 3])
   })
-  test('pads the bounds when the view is inside them', () => {
-    expect(maxBoundsFor([0, 0, 10, 20], [2, 2, 8, 18])).toEqual([-1, -2, 11, 22])
+  test('an edge point can be centered in a fitted-size view', () => {
+    const fittedView: Bounds = [0, 0, 4, 2]
+    const [west, south] = maxBoundsFor([0, 0, 4, 2], fittedView)
+    // Centered on the south-west corner, the view reaches 2 west and 1 south.
+    expect(west).toBeLessThanOrEqual(0 - 2)
+    expect(south).toBeLessThanOrEqual(0 - 1)
+  })
+  test('clamped to the world', () => {
+    expect(maxBoundsFor([-180, -90, 180, 90], [-180, -90, 180, 90])).toEqual([-180, -90, 180, 90])
   })
 })
 

@@ -6,26 +6,48 @@ import { useTransport } from '@connectrpc/connect-query'
 import * as stylex from '@stylexjs/stylex'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams, useRouteContext } from '@tanstack/react-router'
-import { Map as MapLibreMap, setWorkerUrl, type ErrorEvent } from 'maplibre-gl'
+import {
+  Map as MapLibreMap,
+  setWorkerUrl,
+  type ErrorEvent,
+  type FilterSpecification,
+} from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { estimatedExtentQuery, parcelIdsByFeatureQuery } from '../api/parcels.ts'
+import {
+  estimatedExtentQuery,
+  parcelExtentQuery,
+  parcelIdsByFeatureQuery,
+  parcelQuery,
+} from '../api/parcels.ts'
 import { currentPath } from '../auth.ts'
 import { ErrorAlert } from '../components/ErrorAlert.tsx'
-import { featureIdToBigInt } from '../links.tsx'
+import { featureIdToBigInt, featureIdToNumber } from '../links.tsx'
 import {
   boundsFromExtent,
   boundsFromMetadata,
+  defaultZoomFromMetadata,
   maxBoundsFor,
   type Bounds,
 } from './bounds.ts'
 import {
   EMPTY_STYLE,
   PARCEL_SOURCE,
+  PARCEL_SOURCE_LAYER,
   PARCELS_FILL,
   parcelLayers,
   parcelSource,
+  SELECTED_LAYERS,
+  selectedFilter,
 } from './style.ts'
+import {
+  boxCenter,
+  boxFromExtent,
+  geometryBox,
+  mergeBoxes,
+  SELECTION_PADDING_PX,
+  selectionZoom,
+} from './selection.ts'
 import { createTransformRequest, parcelTilesUrl } from './tiles.ts'
 
 // MapLibre finds its worker next to its own module by default, which a bundle
@@ -41,11 +63,41 @@ const styles = stylex.create({
   },
 })
 
-/** Adds the parcel source and layers above every layer the style has. */
-function addParcelLayers(map: MapLibreMap, tilesUrl: string) {
+/**
+ * Adds the parcel source and layers above every layer the style has, with
+ * the current highlight.
+ */
+function addParcelLayers(map: MapLibreMap, tilesUrl: string, featureId: number | null) {
   if (map.getSource(PARCEL_SOURCE)) return
   map.addSource(PARCEL_SOURCE, parcelSource(tilesUrl))
-  for (const layer of parcelLayers(null)) map.addLayer(layer)
+  for (const layer of parcelLayers(featureId)) map.addLayer(layer)
+}
+
+function setHighlight(map: MapLibreMap, featureId: number | null) {
+  for (const id of SELECTED_LAYERS) {
+    if (map.getLayer(id)) map.setFilter(id, selectedFilter(featureId))
+  }
+}
+
+/** The box of a feature from the tiles already loaded, merging clipped pieces. */
+function boxFromLoadedTiles(map: MapLibreMap, featureId: number) {
+  const filter: FilterSpecification = ['==', ['id'], featureId]
+  const pieces = map.querySourceFeatures(PARCEL_SOURCE, {
+    sourceLayer: PARCEL_SOURCE_LAYER,
+    filter,
+  })
+  // MapLibre types `geometry` with @types/geojson, which isn't a dependency.
+  return mergeBoxes(pieces.map((piece) => geometryBox((piece as { geometry: unknown }).geometry)))
+}
+
+/** Runs once the map has loaded every tile it needs for the current view. */
+function whenIdle(map: MapLibreMap, run: () => void): () => void {
+  if (map.loaded() && map.areTilesLoaded()) {
+    run()
+    return () => {}
+  }
+  map.once('idle', run)
+  return () => map.off('idle', run)
 }
 
 /** The HTTP status of a failed request, if the error carries one. */
@@ -100,12 +152,16 @@ export function ParcelMap({ onNote }: { onNote: MapNote }) {
 }
 
 function MapView({ bounds, onNote }: { bounds: Bounds; onNote: MapNote }) {
-  const { config, auth, queryClient } = useRouteContext({ from: '/app/parcels' })
+  const { config, auth, queryClient, instance } = useRouteContext({ from: '/app/parcels' })
   const transport = useTransport()
   const navigate = useNavigate()
   const { parcelId } = useParams({ strict: false })
   const container = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<unknown>(null)
+  // The map, once it has loaded and fitted the instance. Selection waits for it.
+  const [loadedMap, setLoadedMap] = useState<MapLibreMap | null>(null)
+  // The highlighted feature, for layers added when a style (re)loads.
+  const highlighted = useRef<number | null>(null)
 
   // The map is created once; its click handler reads the latest values here.
   const latest = useRef({ parcelId, onNote })
@@ -166,6 +222,7 @@ function MapView({ bounds, onNote }: { bounds: Bounds; onNote: MapNote }) {
     // bounds, so maxBounds can include the fitted view (see maxBoundsFor).
     map.once('load', () => {
       map.setMaxBounds(maxBoundsFor(bounds, map.getBounds().toArray().flat() as Bounds))
+      setLoadedMap(map)
     })
 
     // A click inside a parcel selects it. A click on empty map changes nothing.
@@ -179,7 +236,7 @@ function MapView({ bounds, onNote }: { bounds: Bounds; onNote: MapNote }) {
     let styleLoaded = false
     map.on('style.load', () => {
       styleLoaded = true
-      addParcelLayers(map, tilesUrl)
+      addParcelLayers(map, tilesUrl, highlighted.current)
     })
 
     map.on('error', (event) => {
@@ -197,8 +254,81 @@ function MapView({ bounds, onNote }: { bounds: Bounds; onNote: MapNote }) {
       }
     })
 
-    return () => map.remove()
+    return () => {
+      setLoadedMap(null)
+      map.remove()
+    }
   }, [config, auth, bounds])
+
+  /**
+   * Selection (spec: Selection): when the selected parcel changes, highlight
+   * its feature and move the camera to it. Cleared, the highlight goes and
+   * the camera stays.
+   */
+  useEffect(() => {
+    if (!loadedMap) return
+    const map: MapLibreMap = loadedMap
+    let cancelled = false
+    let stopWaiting = () => {}
+    const highlight = (featureId: number | null) => {
+      highlighted.current = featureId
+      setHighlight(map, featureId)
+    }
+    const center = (box: Bounds) => {
+      const fit = map.cameraForBounds(box, { padding: SELECTION_PADDING_PX })
+      const zoom = selectionZoom({
+        fitZoom: fit?.zoom ?? map.getMaxZoom(),
+        currentZoom: map.getZoom(),
+        defaultZoom: defaultZoomFromMetadata(instance.metadata),
+      })
+      map.easeTo({ center: boxCenter(box), zoom })
+    }
+
+    async function select(parcelId: string) {
+      // The same query as the pane, so no extra request. If it fails, the pane
+      // shows why; the map just has nothing to show.
+      let featureId: number | null = null
+      try {
+        const { parcels } = await queryClient.fetchQuery(parcelQuery(transport, parcelId))
+        const id = parcels[parcelId]?.parcelDetails?.featureId
+        featureId = id === undefined ? null : featureIdToNumber(id)
+      } catch {
+        return
+      }
+      if (cancelled) return
+      highlight(featureId)
+      // No current geometry: nothing to find. The pane says so.
+      if (featureId === null) return
+
+      let box: Bounds | null = null
+      try {
+        const { extents } = await queryClient.fetchQuery(parcelExtentQuery(transport, parcelId))
+        const extent = extents[parcelId]
+        box = extent ? boxFromExtent(extent) : null
+      } catch {
+        // The tile fallback below; the error isn't shown (spec: Parcel location).
+      }
+      if (cancelled) return
+      if (box) {
+        center(box)
+        return
+      }
+      const found = featureId
+      stopWaiting = whenIdle(map, () => {
+        if (cancelled) return
+        const tileBox = boxFromLoadedTiles(map, found)
+        if (tileBox) center(tileBox)
+        else latest.current.onNote('Location not loaded. Zoom in to find it on the map.')
+      })
+    }
+
+    if (parcelId === undefined) highlight(null)
+    else void select(parcelId)
+    return () => {
+      cancelled = true
+      stopWaiting()
+    }
+  }, [loadedMap, parcelId, queryClient, transport, instance.metadata])
 
   return (
     <>
