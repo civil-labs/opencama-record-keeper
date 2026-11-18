@@ -240,6 +240,18 @@ protobuf JSON form, where an `int64` is a string, so `JSON.stringify` never sees
 
 **Manual:** each lookup page loads from the stack, and an unknown ID shows "Not found".
 
+**As built:**
+
+- `src/api/lookups.ts` holds the query options for the four whole-table reads (land
+  uses, zoning, neighborhoods, definitions), so loaders and pages share one cache
+  entry. The spec's code layout lists it.
+- An unknown path is a catch-all `$` route inside the signed-in layout. Without it, an
+  unknown path matched only the root route, outside the auth check and the navbar.
+- `<RecordLink>` also treats `landUseType` and `neighborhoodDefinition` as types with
+  no page, so land use types and definitions are plain text.
+- `url` fields become links only for `http` and `https`, so a `javascript:` URI from
+  the API stays text.
+
 ## PR 4: parcels page (`feat/parcels-page`)
 
 1. **`feat: two-pane parcels layout`**: `ParcelsLayout.tsx` with the StyleX grid, the

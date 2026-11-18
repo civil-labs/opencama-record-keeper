@@ -12,10 +12,12 @@ import {
   useRouteContext,
   type RouterHistory,
 } from '@tanstack/react-router'
+import { landUsesQuery, neighborhoodsQuery, zoningQuery } from './api/lookups.ts'
 import type { Auth } from './auth.ts'
 import { Navbar } from './components/Navbar.tsx'
 import { RouteError } from './components/RouteError.tsx'
 import { Callback, CallbackError } from './routes/Callback.tsx'
+import { LandUsePage, NeighborhoodPage, ZoningPage } from './routes/LookupPage.tsx'
 import { NotBuiltYet } from './routes/NotBuiltYet.tsx'
 import { NotFound } from './routes/NotFound.tsx'
 import { spacing } from './theme/tokens.stylex.ts'
@@ -177,7 +179,11 @@ const landUseRoute = createRoute({
     parse: ({ landUseId }) => ({ landUseId: parseUuid(landUseId) }),
     stringify: ({ landUseId }) => ({ landUseId }),
   },
-  component: () => <NotBuiltYet page="Land use" />,
+  loader: async ({ context: { queryClient, transport }, params }) => {
+    const data = await queryClient.ensureQueryData(landUsesQuery(transport))
+    if (!(params.landUseId in data.landUses)) throw notFound()
+  },
+  component: LandUsePage,
 })
 
 const zoningRoute = createRoute({
@@ -187,7 +193,11 @@ const zoningRoute = createRoute({
     parse: ({ zoningId }) => ({ zoningId: parseUuid(zoningId) }),
     stringify: ({ zoningId }) => ({ zoningId }),
   },
-  component: () => <NotBuiltYet page="Zoning" />,
+  loader: async ({ context: { queryClient, transport }, params }) => {
+    const data = await queryClient.ensureQueryData(zoningQuery(transport))
+    if (!(params.zoningId in data.zoning)) throw notFound()
+  },
+  component: ZoningPage,
 })
 
 const neighborhoodRoute = createRoute({
@@ -199,7 +209,11 @@ const neighborhoodRoute = createRoute({
     }),
     stringify: ({ neighborhoodId }) => ({ neighborhoodId }),
   },
-  component: () => <NotBuiltYet page="Neighborhood" />,
+  loader: async ({ context: { queryClient, transport }, params }) => {
+    const data = await queryClient.ensureQueryData(neighborhoodsQuery(transport))
+    if (!(params.neighborhoodId in data.neighborhoods)) throw notFound()
+  },
+  component: NeighborhoodPage,
 })
 
 /**
