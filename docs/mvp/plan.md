@@ -263,7 +263,7 @@ protobuf JSON form, where an `int64` is a string, so `JSON.stringify` never sees
    - If the style fails, fall back to an empty style.
    - Import `maplibre-gl.css` here.
 3. **`feat: instance bounds and starting view`**: `map/bounds.ts`. Metadata bounds,
-   falling back to the extent RPC; 10% `maxBounds` padding; fit the bounds when nothing
+   falling back to the extent RPC; `maxBounds` (see the spec); fit the bounds when nothing
    is selected.
 4. **`feat: select a parcel by clicking`**: `GetParcelIdsByFeatureId`, then navigate,
    pushing a history entry.
@@ -276,6 +276,39 @@ protobuf JSON form, where an `int64` is a string, so `JSON.stringify` never sees
    - The extent query, with the tile fallback and the "Location not loaded" note.
    - The camera rule and the highlight filter.
    - The map stays mounted across selections.
+
+**As built (steps 1–3):**
+
+- Routes that lay out the whole area below the navbar set `staticData.fullBleed`; the
+  signed-in `<main>` then drops its padding and scrolling. The router context gains
+  `config` and `instance`, for the map.
+- MapLibre 6 finds its worker next to its own module, which the bundle doesn't have.
+  `setWorkerUrl` points it at the worker Vite emits (`?url`), so it loads same-origin as
+  a module worker, with no `blob:` URL for the CSP to allow.
+- `maxBounds` covers the fitted view as well as the bounds, plus half that view on each
+  side (spec corrected). Padding the bounds alone by 10% forced a zoom-in on the
+  synthetic instance (tall, in a wide pane), cutting off its top and bottom rows, and
+  kept an edge parcel from being centered.
+- `src/map/tiles.ts` holds the tile URL and `transformRequest`, and `src/api/parcels.ts`
+  the parcel query options.
+
+**As built (steps 4–7):**
+
+- A map click's one-line notes ("This map feature has no parcel record.", a failed
+  lookup, "Location not loaded…") are shown by `ParcelsLayout` at the top of the pane,
+  as `role="status"`. Each belongs to the selection it was raised under and goes away
+  with it.
+- `Fields` gains a `records` kind for lists of IDs (`partyIds`, `zoningIds`,
+  `improvementIds`).
+- The first transfers page leaves `after` unset (spec corrected): the gateway rejects an
+  empty cursor, though Connect-Query types the page-param field as required.
+- `TransfersList.tsx` lives in `components/`, since the party page will use it too.
+- Selection waits for the map's `load`, after `maxBounds` is set, then reads the parcel
+  and its extent through `queryClient.fetchQuery`, which shares the loader's requests.
+- Dev only: the lazy devtools import is aborted when the first load redirects to
+  sign-in; the loader now renders nothing on failure instead of an uncaught error.
+- `src/test/fixtures.ts` is a fake Civil OS (`createRouterTransport`) with synthetic
+  records, for page tests.
 
 **Unit tests:** `bounds.ts`; `selection.ts` (merging clipped boxes; the three camera
 cases); `transformRequest` and the tile URL; and the routing test that the layout

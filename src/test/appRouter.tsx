@@ -45,7 +45,20 @@ export async function renderApp(
   })
   const history = createMemoryHistory({ initialEntries: [path] })
   const router = createAppRouter(
-    { auth: signedInAuth(), transport, queryClient },
+    {
+      config: {
+        gatewayUrl: 'http://gateway.test',
+        clientId: 'record-keeper-test',
+        basemapStyleUrl: 'http://basemap.test/style.json',
+      },
+      instance: {
+        authIssuerUrl: 'http://issuer.test',
+        metadata: { bounds: { west: -140, south: -40, east: -139.99, north: -39.99 } },
+      },
+      auth: signedInAuth(),
+      transport,
+      queryClient,
+    },
     history,
   )
   await act(() => router.load())

@@ -1,4 +1,5 @@
 // The <dl> of a record's fields, following the spec's rendering rule.
+import { Fragment } from 'react'
 import { RecordLink, type RecordType } from '../links.tsx'
 
 /** A protobuf Timestamp, as protobuf-es generates it. */
@@ -20,6 +21,14 @@ export type Field = { label: string } & (
       id: string | null | undefined
       /** The record's label, when it's already known. */
       text?: string | undefined
+    }
+  | {
+      /** Several IDs of one record type, each linked if its type has a page. */
+      kind: 'records'
+      type: RecordType
+      ids: readonly string[]
+      /** Labels by ID, when they're already known. */
+      labels?: Readonly<Record<string, string | undefined>>
     }
   | { kind: 'timestamp'; value: Timestamp | null | undefined }
   | {
@@ -69,6 +78,14 @@ function FieldValue({ field }: { field: Field }) {
       ) : (
         <RecordLink type={field.type} id={field.id} label={field.text} />
       )
+    case 'records':
+      if (field.ids.length === 0) return EMPTY
+      return field.ids.map((id, index) => (
+        <Fragment key={id}>
+          {index > 0 && ', '}
+          <RecordLink type={field.type} id={id} label={field.labels?.[id]} />
+        </Fragment>
+      ))
     case 'timestamp':
       return field.value ? formatTimestamp(field.value) : EMPTY
     case 'json':

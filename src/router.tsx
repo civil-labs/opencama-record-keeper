@@ -9,20 +9,28 @@ import {
   notFound,
   Outlet,
   redirect,
+  useMatches,
   useRouteContext,
   type RouterHistory,
 } from '@tanstack/react-router'
+import type { InstanceMetadata } from './api/instance.ts'
 import { landUsesQuery, neighborhoodsQuery, zoningQuery } from './api/lookups.ts'
+import { parcelExtentQuery, parcelQuery } from './api/parcels.ts'
 import type { Auth } from './auth.ts'
+import type { Config } from './config.ts'
 import { Navbar } from './components/Navbar.tsx'
 import { RouteError } from './components/RouteError.tsx'
 import { Callback, CallbackError } from './routes/Callback.tsx'
 import { LandUsePage, NeighborhoodPage, ZoningPage } from './routes/LookupPage.tsx'
 import { NotBuiltYet } from './routes/NotBuiltYet.tsx'
 import { NotFound } from './routes/NotFound.tsx'
+import { ParcelPane } from './routes/ParcelPane.tsx'
+import { ParcelsLayout } from './routes/ParcelsLayout.tsx'
 import { spacing } from './theme/tokens.stylex.ts'
 
 export interface RouterContext {
+  config: Config
+  instance: InstanceMetadata
   auth: Auth
   /** The authenticated Connect transport, for loaders. */
   transport: Transport
@@ -44,6 +52,12 @@ const styles = stylex.create({
     minHeight: 0,
     overflowY: 'auto',
     padding: spacing.medium,
+  },
+  // A page that lays out the whole area itself, such as the parcels grid.
+  fullBleed: {
+    flexGrow: 1,
+    minHeight: 0,
+    overflow: 'hidden',
   },
 })
 
@@ -79,10 +93,13 @@ const appRoute = createRoute({
   },
   component: function AppLayout() {
     const { auth } = useRouteContext({ from: '/app' })
+    const fullBleed = useMatches({
+      select: (matches) => matches.some((match) => match.staticData.fullBleed),
+    })
     return (
       <>
         <Navbar auth={auth} />
-        <main {...stylex.props(styles.page)}>
+        <main {...stylex.props(fullBleed ? styles.fullBleed : styles.page)}>
           <Outlet />
         </main>
       </>
@@ -117,19 +134,15 @@ export function parseUuid(value: string): string {
 const parcelsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'parcels',
-  component: function ParcelsLayout() {
-    return (
-      <>
-        <NotBuiltYet page="Parcels map" />
-        <Outlet />
-      </>
-    )
-  },
+  staticData: { fullBleed: true },
+  component: ParcelsLayout,
 })
 
+/** No parcel selected: the pane is blank. */
 const parcelsIndexRoute = createRoute({
   getParentRoute: () => parcelsRoute,
   path: '/',
+  component: () => null,
 })
 
 const parcelRoute = createRoute({
@@ -139,7 +152,23 @@ const parcelRoute = createRoute({
     parse: ({ parcelId }) => ({ parcelId: parseUuid(parcelId) }),
     stringify: ({ parcelId }) => ({ parcelId }),
   },
-  component: () => <NotBuiltYet page="Parcel details" />,
+  /**
+   * Prefetches the parcel and the lookups its labels use, and starts its
+   * extent for the map, in parallel. Transfers load on their own.
+   */
+  loader: async ({ context: { queryClient, transport }, params: { parcelId } }) => {
+    void queryClient.prefetchQuery(parcelExtentQuery(transport, parcelId))
+    const [parcel] = await Promise.all([
+      queryClient.ensureQueryData(parcelQuery(transport, parcelId)),
+      queryClient.ensureQueryData(landUsesQuery(transport)),
+      queryClient.ensureQueryData(zoningQuery(transport)),
+      queryClient.ensureQueryData(neighborhoodsQuery(transport)),
+    ])
+    if (!(parcelId in parcel.parcels)) throw notFound()
+  },
+  component: ParcelPane,
+  // Rendered in the pane, so the map stays usable.
+  notFoundComponent: () => <p>No parcel with this ID.</p>,
 })
 
 const addressRoute = createRoute({
@@ -257,6 +286,10 @@ export function createAppRouter(context: RouterContext, history?: RouterHistory)
 }
 
 declare module '@tanstack/react-router' {
+  interface StaticDataRouteOption {
+    /** The page lays out the whole area below the navbar, with no padding. */
+    fullBleed?: boolean
+  }
   interface Register {
     router: ReturnType<typeof createAppRouter>
   }
