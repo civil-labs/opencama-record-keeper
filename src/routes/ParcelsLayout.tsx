@@ -6,6 +6,7 @@ import { Outlet, useParams } from '@tanstack/react-router'
 import { useCallback, useState } from 'react'
 import { ParcelMap } from '../map/ParcelMap.tsx'
 import { sizes, spacing } from '../theme/tokens.stylex.ts'
+import { NeighborhoodDefinitionSelect } from './NeighborhoodDefinitionSelect.tsx'
 
 const styles = stylex.create({
   grid: {
@@ -40,6 +41,8 @@ export function ParcelsLayout() {
         <ParcelMap onNote={onNote} />
       </div>
       <section aria-label="Parcel details" {...stylex.props(styles.pane)}>
+        {/* Part of the layout, so it stays put while the selection changes. */}
+        <NeighborhoodDefinitionSelect />
         {note && note.parcelId === parcelId && <p role="status">{note.message}</p>}
         <Outlet />
       </section>

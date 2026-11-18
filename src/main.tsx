@@ -10,6 +10,7 @@ import { createTransport } from './api/transport.ts'
 import { Auth } from './auth.ts'
 import { ErrorAlert } from './components/ErrorAlert.tsx'
 import { loadConfig } from './config.ts'
+import { DefinitionChoice } from './neighborhoodDefinition.ts'
 import { createAppRouter } from './router.tsx'
 
 // Dev builds only: import.meta.env.DEV is false in production, so the import
@@ -40,7 +41,16 @@ async function start() {
   await auth.start()
   const transport = createTransport(config.gatewayUrl, auth)
   const queryClient = createQueryClient(auth)
-  const router = createAppRouter({ config, instance, auth, transport, queryClient })
+  const definitionChoice = DefinitionChoice.fromWindow()
+  definitionChoice.start(window)
+  const router = createAppRouter({
+    config,
+    instance,
+    auth,
+    transport,
+    queryClient,
+    definitionChoice,
+  })
   render(
     <TransportProvider transport={transport}>
       <QueryClientProvider client={queryClient}>

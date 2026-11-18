@@ -1,7 +1,8 @@
-import { cleanup, screen } from '@testing-library/react'
+import { act, cleanup, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test } from 'vitest'
 import { parseUuid } from './router.tsx'
-import { noCallsTransport, renderApp } from './test/appRouter.tsx'
+import { noCallsTransport, recordCalls, renderApp } from './test/appRouter.tsx'
+import { fakeCivilOs, IDS } from './test/fixtures.ts'
 
 afterEach(cleanup)
 
@@ -33,7 +34,7 @@ describe('routes', () => {
     await renderApp('/parcels/not-a-uuid', transport)
     expect(await screen.findByText('No parcel with this ID.')).toBeDefined()
     expect(screen.getByRole('region', { name: 'Parcel details' })).toBeDefined()
-    expect(calls).toEqual([])
+    expect(recordCalls(calls)).toEqual([])
   })
 
   test.each([
@@ -48,7 +49,7 @@ describe('routes', () => {
     await renderApp(path, transport)
     expect(await screen.findByRole('heading', { name: 'Not found' })).toBeDefined()
     expect(screen.getByRole('navigation')).toBeDefined()
-    expect(calls).toEqual([])
+    expect(recordCalls(calls)).toEqual([])
   })
 
   test('an unknown path shows "Not found" under the navbar', async () => {
@@ -56,4 +57,12 @@ describe('routes', () => {
     expect(await screen.findByRole('heading', { name: 'Not found' })).toBeDefined()
     expect(screen.getByRole('navigation')).toBeDefined()
   })
+})
+
+test('the neighborhood definitions load once, on app load, and stay cached', async () => {
+  const { transport, calls } = fakeCivilOs()
+  const { router } = await renderApp('/no/such/page', transport)
+  await act(() => router.navigate({ to: '/addresses/$addressId', params: { addressId: IDS.address } }))
+  await act(() => router.navigate({ to: '/$', params: { _splat: 'no/such/page' } }))
+  expect(calls.filter((c) => c.method === 'getNeighborhoodDefinitions')).toHaveLength(1)
 })

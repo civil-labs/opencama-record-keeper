@@ -2,11 +2,13 @@
 // signed-in fake auth and a transport that records every call.
 import { createRouterTransport, type Transport } from '@connectrpc/connect'
 import { TransportProvider } from '@connectrpc/connect-query'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { createQueryClient } from '../api/queryClient.ts'
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
 import { act, render } from '@testing-library/react'
 import { vi } from 'vitest'
 import type { Auth } from '../auth.ts'
+import { DefinitionChoice } from '../neighborhoodDefinition.ts'
 import { createAppRouter } from '../router.tsx'
 
 export function signedInAuth(): Auth {
@@ -36,12 +38,21 @@ export function noCallsTransport(): { transport: Transport; calls: string[] } {
   return { transport, calls }
 }
 
+/** Calls other than the definitions every signed-in page loads on app load. */
+export function recordCalls(calls: readonly string[]): string[] {
+  return calls.filter((call) => !call.endsWith('/GetNeighborhoodDefinitions'))
+}
+
 export async function renderApp(
   path: string,
   transport: Transport = noCallsTransport().transport,
 ) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+  // The app's cache policy, without retries, so failures show at once.
+  const auth = signedInAuth()
+  const queryClient = createQueryClient(auth)
+  queryClient.setDefaultOptions({
+    ...queryClient.getDefaultOptions(),
+    queries: { ...queryClient.getDefaultOptions().queries, retry: false },
   })
   const history = createMemoryHistory({ initialEntries: [path] })
   const router = createAppRouter(
@@ -55,9 +66,10 @@ export async function renderApp(
         authIssuerUrl: 'http://issuer.test',
         metadata: { bounds: { west: -140, south: -40, east: -139.99, north: -39.99 } },
       },
-      auth: signedInAuth(),
+      auth,
       transport,
       queryClient,
+      definitionChoice: new DefinitionChoice(null),
     },
     history,
   )

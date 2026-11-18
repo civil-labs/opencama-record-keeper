@@ -519,8 +519,13 @@ from the details below.
 **Options:**
 
 - **Source:** `NeighborhoodService/GetNeighborhoodDefinitions`, fetched once **on app
-  load**. The definitions are the response's `neighborhoodDefinitions` map, keyed by ID. The root route's loader calls `ensureQueryData` for it after the auth check,
-  since the call needs a token.
+  load**. The definitions are the response's `neighborhoodDefinitions` map, keyed by ID.
+  The signed-in (`app`) route's loader calls `prefetchQuery` for it after the auth
+  check, since the call needs a token. `prefetchQuery` rather than `ensureQueryData`,
+  because a failure mustn't stop the app (see below).
+  - Loaders run in parallel, so the `$parcelId` loader also awaits that same request
+    (deduplicated) before choosing a definition. Otherwise the parcel would be read
+    with no definition, then again once the definitions arrived.
 - **Caching:** the query is cached with `staleTime: Infinity` and `gcTime: Infinity`, so
   it's never refetched or dropped while the app is open.
 - **Labels and order:** one `<option>` per definition, labeled with its `name`, valued
@@ -550,7 +555,8 @@ reloads, new tabs and browser restarts:
     unavailable (private mode, blocked site data), the choice lives in memory for the
     session and nothing breaks.
 - **Hooks:** components read the choice with `useSyncExternalStore` over that store.
-  Loaders read it directly from the store, outside React.
+  Loaders and the map read it directly from the store, outside React. The store is
+  created in `main.tsx` and passed in the router context as `definitionChoice`.
 - **Other tabs:** the store listens for the `storage` event, so changing the definition
   in one tab updates the others.
 - **Not in the URL.** It's a viewing preference, not part of which record is shown, and
@@ -564,9 +570,15 @@ reloads, new tabs and browser restarts:
   definition is a new query and is fetched.
 - Each definition's result stays cached, so switching back to a definition already
   viewed is instant.
-- While the new result loads, the pane keeps showing the previous result
-  (`placeholderData: keepPreviousData`), with the neighborhood field showing
-  "Loading…". It doesn't flash back to the pane's "Loading…" state.
+- While the new result loads, the pane keeps showing the previous result, with the
+  neighborhood field showing "Loading…". It doesn't flash back to the pane's
+  "Loading…" state.
+  - So the pane reads the parcel with `useQuery`, not `useSuspenseQuery`, whose key
+    change would suspend. Its `placeholderData` keeps the previous result only if it
+    holds the same parcel; `keepPreviousData` would also show the last parcel's
+    details while a different parcel loads.
+  - The map reads the parcel's feature through the same query input once per
+    selection; a definition change doesn't move or re-highlight it.
 - Only the parcel query changes. The map, the transfers section and the lookups don't
   depend on the definition and aren't refetched.
 
