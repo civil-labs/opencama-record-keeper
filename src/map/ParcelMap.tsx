@@ -1,23 +1,31 @@
 // The parcels map (spec: Map). One MapLibre instance per mount of the parcels
 // layout; it survives selection changes because the layout does.
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { Code, ConnectError } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import * as stylex from '@stylexjs/stylex'
 import { useQuery } from '@tanstack/react-query'
-import { useRouteContext } from '@tanstack/react-router'
+import { useNavigate, useParams, useRouteContext } from '@tanstack/react-router'
 import { Map as MapLibreMap, setWorkerUrl, type ErrorEvent } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { estimatedExtentQuery } from '../api/parcels.ts'
+import { estimatedExtentQuery, parcelIdsByFeatureQuery } from '../api/parcels.ts'
 import { currentPath } from '../auth.ts'
 import { ErrorAlert } from '../components/ErrorAlert.tsx'
+import { featureIdToBigInt } from '../links.tsx'
 import {
   boundsFromExtent,
   boundsFromMetadata,
   maxBoundsFor,
   type Bounds,
 } from './bounds.ts'
-import { EMPTY_STYLE, PARCEL_SOURCE, parcelLayers, parcelSource } from './style.ts'
+import {
+  EMPTY_STYLE,
+  PARCEL_SOURCE,
+  PARCELS_FILL,
+  parcelLayers,
+  parcelSource,
+} from './style.ts'
 import { createTransformRequest, parcelTilesUrl } from './tiles.ts'
 
 // MapLibre finds its worker next to its own module by default, which a bundle
@@ -52,6 +60,14 @@ function errorSourceId(event: ErrorEvent): string | undefined {
   return typeof sourceId === 'string' ? sourceId : undefined
 }
 
+/** A one-line message from the map, for the detail pane. */
+export type MapNote = (message: string) => void
+
+function describeError(error: unknown): string {
+  const connectError = ConnectError.from(error)
+  return `${Code[connectError.code]}: ${connectError.rawMessage}`
+}
+
 /** Padding, in pixels, around the bounds when the whole instance is shown. */
 const BOUNDS_PADDING_PX = 24
 
@@ -60,7 +76,7 @@ const BOUNDS_PADDING_PX = 24
  * instance metadata, or else the estimated parcel extent. If neither is
  * usable, the map pane shows why and no map; the detail pane still works.
  */
-export function ParcelMap() {
+export function ParcelMap({ onNote }: { onNote: MapNote }) {
   const { instance } = useRouteContext({ from: '/app/parcels' })
   const metadataBounds = useMemo(
     () => boundsFromMetadata(instance.metadata),
@@ -74,19 +90,52 @@ export function ParcelMap() {
     () => (extent.data ? boundsFromExtent(extent.data) : null),
     [extent.data],
   )
-  if (metadataBounds) return <MapView bounds={metadataBounds} />
+  if (metadataBounds) return <MapView bounds={metadataBounds} onNote={onNote} />
   if (extent.isError) return <ErrorAlert error={extent.error} />
   if (extent.isPending) return <p>Loading map…</p>
   if (!extentBounds) {
     return <ErrorAlert error={new Error('The instance reports no usable bounds.')} />
   }
-  return <MapView bounds={extentBounds} />
+  return <MapView bounds={extentBounds} onNote={onNote} />
 }
 
-function MapView({ bounds }: { bounds: Bounds }) {
-  const { config, auth } = useRouteContext({ from: '/app/parcels' })
+function MapView({ bounds, onNote }: { bounds: Bounds; onNote: MapNote }) {
+  const { config, auth, queryClient } = useRouteContext({ from: '/app/parcels' })
+  const transport = useTransport()
+  const navigate = useNavigate()
+  const { parcelId } = useParams({ strict: false })
   const container = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<unknown>(null)
+
+  // The map is created once; its click handler reads the latest values here.
+  const latest = useRef({ parcelId, onNote })
+  useEffect(() => {
+    latest.current = { parcelId, onNote }
+  })
+
+  /**
+   * A click on a parcel (spec: Click): look up its parcel ID, then navigate,
+   * pushing a history entry so Back returns to the previous selection.
+   */
+  async function selectFeature(featureId: number) {
+    try {
+      const { parcelIds } = await queryClient.fetchQuery(
+        parcelIdsByFeatureQuery(transport, [featureIdToBigInt(featureId)]),
+      )
+      const clicked = parcelIds[String(featureId)]
+      if (clicked === undefined) {
+        latest.current.onNote('This map feature has no parcel record.')
+      } else if (clicked !== latest.current.parcelId) {
+        await navigate({ to: '/parcels/$parcelId', params: { parcelId: clicked } })
+      }
+    } catch (caught) {
+      latest.current.onNote(`Couldn't select that parcel. ${describeError(caught)}`)
+    }
+  }
+  const selectFeatureRef = useRef(selectFeature)
+  useEffect(() => {
+    selectFeatureRef.current = selectFeature
+  })
 
   useEffect(() => {
     if (!container.current) return
@@ -117,6 +166,12 @@ function MapView({ bounds }: { bounds: Bounds }) {
     // bounds, so maxBounds can include the fitted view (see maxBoundsFor).
     map.once('load', () => {
       map.setMaxBounds(maxBoundsFor(bounds, map.getBounds().toArray().flat() as Bounds))
+    })
+
+    // A click inside a parcel selects it. A click on empty map changes nothing.
+    map.on('click', PARCELS_FILL, (event) => {
+      const featureId = event.features?.[0]?.id
+      if (typeof featureId === 'number') void selectFeatureRef.current(featureId)
     })
 
     // The parcel layers go on every style that loads: the basemap, or the

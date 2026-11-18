@@ -9,3 +9,7 @@ export const estimatedExtentQuery = (transport: Transport) => ({
   ...createQueryOptions(ParcelsService.method.getEstimatedParcelsExtentWGS84, {}, { transport }),
   ...lookupQueryOptions,
 })
+
+/** The parcel IDs for map features, keyed by feature ID as a decimal string. */
+export const parcelIdsByFeatureQuery = (transport: Transport, featureIds: bigint[]) =>
+  createQueryOptions(ParcelsService.method.getParcelIdsByFeatureId, { featureIds }, { transport })
