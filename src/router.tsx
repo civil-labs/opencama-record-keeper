@@ -1,4 +1,5 @@
 // Every route, in one place (spec: Routes, Router setup).
+import type { Transport } from '@connectrpc/connect'
 import * as stylex from '@stylexjs/stylex'
 import {
   createRootRouteWithContext,
@@ -13,6 +14,8 @@ import { spacing } from './theme/tokens.stylex.ts'
 
 export interface RouterContext {
   auth: Auth
+  /** The authenticated Connect transport, for loaders. */
+  transport: Transport
 }
 
 const styles = stylex.create({

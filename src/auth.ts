@@ -243,6 +243,16 @@ export class Auth {
     return navigatingAway()
   }
 
+  /**
+   * Ends the app's session and starts a fresh sign-in, returning to `returnTo`.
+   * Used when the gateway rejects the token, and when there's no valid token.
+   * Removing the stored user also sends other tabs to sign-in.
+   */
+  async clearAndSignIn(returnTo: string): Promise<never> {
+    if (!this.redirecting) await this.userManager.removeUser()
+    return this.signIn(returnTo)
+  }
+
   /** Finishes sign-in on /callback, and returns the path to go back to. */
   async completeSignIn(): Promise<string> {
     const user = await this.userManager.signinCallback()

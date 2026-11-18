@@ -3,6 +3,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { fetchInstanceMetadata } from './api/instance.ts'
+import { createTransport } from './api/transport.ts'
 import { Auth } from './auth.ts'
 import { ErrorAlert } from './components/ErrorAlert.tsx'
 import { loadConfig } from './config.ts'
@@ -16,14 +17,15 @@ function render(node: ReactNode) {
   root.render(<StrictMode>{node}</StrictMode>)
 }
 
-// Startup: config → instance metadata → auth → router. A failure here is shown
+// Startup: config → instance metadata → auth → transport → router. A failure here is shown
 // on the page; there's nothing else to render without them.
 async function start() {
   const config = await loadConfig()
   const instance = await fetchInstanceMetadata(config.gatewayUrl)
   const auth = Auth.create(instance.authIssuerUrl, config.clientId)
   await auth.start()
-  const router = createAppRouter({ auth })
+  const transport = createTransport(config.gatewayUrl, auth)
+  const router = createAppRouter({ auth, transport })
   render(<RouterProvider router={router} />)
 }
 
