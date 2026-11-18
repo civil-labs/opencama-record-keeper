@@ -1,4 +1,4 @@
-import { cleanup, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { fakeCivilOs, IDS } from '../test/fixtures.ts'
 import { renderApp } from '../test/appRouter.tsx'
@@ -48,5 +48,36 @@ describe('parcel pane', () => {
     expect(methods).toContain('getParcelsWithImprovementSummaryByParcelId')
     expect(methods).toContain('getParcelExtentsWGS84ByParcelId')
     expect(methods.filter((m) => m === 'getParcelsWithImprovementSummaryByParcelId')).toHaveLength(1)
+  })
+})
+
+describe('transfers on the pane', () => {
+  test('lists 25 at a time, and "More" fetches the next page', async () => {
+    const { transport, calls } = fakeCivilOs({ transfers: 30 })
+    await renderApp(`/parcels/${IDS.parcel}`, transport)
+    const rows = async () =>
+      (await pane().findAllByRole('link', { name: /^90000000-/ })).length
+    expect(await rows()).toBe(25)
+    expect(pane().getByText('2023-11-14T22:13:20.000Z')).toBeDefined()
+    fireEvent.click(pane().getByRole('button', { name: 'More' }))
+    await waitFor(async () => expect(await rows()).toBe(30))
+    expect(pane().queryByRole('button', { name: 'More' })).toBeNull()
+    const requests = calls.filter((c) => c.method === 'getTransfersByParcelId')
+    expect(requests.map((c) => (c.input as { after?: string }).after)).toEqual([undefined, '25'])
+  })
+
+  test('a failed "More" keeps the loaded rows and shows its error', async () => {
+    const { transport } = fakeCivilOs({ transfers: 30, failNextTransfersPage: true })
+    await renderApp(`/parcels/${IDS.parcel}`, transport)
+    expect(await pane().findAllByRole('link', { name: /^90000000-/ })).toHaveLength(25)
+    fireEvent.click(pane().getByRole('button', { name: 'More' }))
+    expect((await pane().findByRole('alert')).textContent).toBe('Unavailable: reader down')
+    expect(pane().getAllByRole('link', { name: /^90000000-/ })).toHaveLength(25)
+  })
+
+  test('no transfers: "None."', async () => {
+    const { transport } = fakeCivilOs({ transfers: 0 })
+    await renderApp(`/parcels/${IDS.parcel}`, transport)
+    expect(await pane().findByText('None.')).toBeDefined()
   })
 })

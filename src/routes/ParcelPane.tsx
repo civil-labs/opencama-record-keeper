@@ -8,6 +8,7 @@ import { notFound, useParams } from '@tanstack/react-router'
 import { landUsesQuery, neighborhoodsQuery, zoningQuery } from '../api/lookups.ts'
 import { parcelQuery } from '../api/parcels.ts'
 import { Fields, type Field } from '../components/Fields.tsx'
+import { TransfersList, useTransfersByParcel } from '../components/TransfersList.tsx'
 
 /** A label for each ID that a lookup map knows, by its `name`. */
 function labels(map: Record<string, { name: string }> | undefined) {
@@ -138,6 +139,17 @@ export function ParcelPane() {
         <h2>Improvements</h2>
         <Fields fields={improvementFields(parcel.improvementSummary)} />
       </section>
+      <ParcelTransfers parcelId={parcelId} />
     </>
+  )
+}
+
+function ParcelTransfers({ parcelId }: { parcelId: string }) {
+  const transfers = useTransfersByParcel(parcelId)
+  return (
+    <section>
+      <h2>Transfers</h2>
+      <TransfersList query={transfers} />
+    </section>
   )
 }

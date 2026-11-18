@@ -7,7 +7,12 @@ import {
   RealPropertyTransfersService,
   ZoningService,
 } from '@civil-labs/civil-os-api'
-import { createRouterTransport, type ConnectRouter } from '@connectrpc/connect'
+import {
+  Code,
+  ConnectError,
+  createRouterTransport,
+  type ConnectRouter,
+} from '@connectrpc/connect'
 
 export const IDS = {
   landUse: '11000000-0000-4000-8000-000000000001',
@@ -30,7 +35,12 @@ export interface FakeCalls {
 }
 
 export function fakeCivilOs(
-  options: { transfers?: number; register?: (router: ConnectRouter) => void } = {},
+  options: {
+    transfers?: number
+    /** Make every transfers page after the first fail. */
+    failNextTransfersPage?: boolean
+    register?: (router: ConnectRouter) => void
+  } = {},
 ) {
   const log: FakeCalls['calls'] = []
   const record = (method: string, input: unknown) => log.push({ method, input })
@@ -112,6 +122,9 @@ export function fakeCivilOs(
     router.service(RealPropertyTransfersService, {
       getTransfersByParcelId: (req) => {
         record('getTransfersByParcelId', req)
+        if (options.failNextTransfersPage && req.after) {
+          throw new ConnectError('reader down', Code.Unavailable)
+        }
         const start = req.after ? Number(req.after) : 0
         const first = req.first ?? 25
         const end = Math.min(start + first, transferCount)
