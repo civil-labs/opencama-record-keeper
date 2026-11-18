@@ -1,5 +1,5 @@
 {
   "gatewayUrl": "http://localhost:8080",
-  "clientId": "civil-os-dev",
+  "clientId": "record-keeper-dev",
   "basemapStyleUrl": "https://tiles.openfreemap.org/styles/positron"
 }

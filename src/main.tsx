@@ -1,10 +1,12 @@
 import './stylex.css'
+import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { fetchInstanceMetadata } from './api/instance.ts'
+import { Auth } from './auth.ts'
 import { ErrorAlert } from './components/ErrorAlert.tsx'
 import { loadConfig } from './config.ts'
-import { Root } from './Root.tsx'
+import { createAppRouter } from './router.tsx'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('missing #root element')
@@ -14,12 +16,14 @@ function render(node: ReactNode) {
   root.render(<StrictMode>{node}</StrictMode>)
 }
 
-// Startup: config → instance metadata → app. A failure here is shown on the
-// page; there's nothing else to render without them.
+// Startup: config → instance metadata → auth → router. A failure here is shown
+// on the page; there's nothing else to render without them.
 async function start() {
   const config = await loadConfig()
-  await fetchInstanceMetadata(config.gatewayUrl)
-  render(<Root />)
+  const instance = await fetchInstanceMetadata(config.gatewayUrl)
+  const auth = Auth.create(instance.authIssuerUrl, config.clientId)
+  const router = createAppRouter({ auth })
+  render(<RouterProvider router={router} />)
 }
 
 start().catch((error: unknown) => {

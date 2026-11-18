@@ -37,8 +37,10 @@
   Compose v5.1 are running, and the user can reach the daemon through the `docker`
   group.
 - **Local URLs:** the gateway is at `http://localhost:8080` and Dex at
-  `http://localhost:5556/dex`. The Dex client is `civil-os-dev`, with redirect
-  `http://localhost:3000/callback`. The test user is `dev@example.com`.
+  `http://localhost:5556/dex`. The Dex client is `record-keeper-dev`, a public client
+  with redirect `http://localhost:3000/callback`, added in civil-os #60. (The plan
+  first named `civil-os-dev`, which is confidential, and the local Dex didn't allow
+  CORS, so a browser sign-in couldn't finish.) The test user is `dev@example.com`.
 
 ## The SDK release
 

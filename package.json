@@ -16,6 +16,8 @@
     "@connectrpc/connect": "2.3.0",
     "@connectrpc/connect-web": "2.3.0",
     "@stylexjs/stylex": "0.19.2",
+    "@tanstack/react-router": "1.170.46",
+    "oidc-client-ts": "3.5.0",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

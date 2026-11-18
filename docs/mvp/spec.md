@@ -37,7 +37,7 @@ differs between deployments, so one built image serves any instance.
 ```json
 {
   "gatewayUrl": "http://localhost:8080",
-  "clientId": "civil-os-dev",
+  "clientId": "record-keeper-dev",
   "basemapStyleUrl": "https://tiles.openfreemap.org/styles/positron"
 }
 ```
@@ -53,7 +53,10 @@ differs between deployments, so one built image serves any instance.
   that instance's `CIVIL_OS_GATEWAY_ALLOWED_CLIENT_IDS`, or the gateway rejects every
   request.
 - **Dev runs on the Vite dev server, port 3000.** It uses the local Dex client
-  `civil-os-dev`, whose registered redirect is `http://localhost:3000/callback`.
+  `record-keeper-dev`, a public client whose registered redirect is
+  `http://localhost:3000/callback`. The local Dex allows CORS from that origin, and
+  the gateway allows the client ID (civil-os #60). civil-os's own `civil-os-dev` is a
+  confidential client, which a browser can't use.
 
 These are the civil-os local-stack values: the compose stack publishes the
 gateway on `127.0.0.1:8080` and Dex on `127.0.0.1:5556`.
