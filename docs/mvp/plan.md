@@ -106,9 +106,19 @@ PRs 4 to 6 are vertical slices, each usable in the app when merged.
      `verbatimModuleSyntax: true`.
    - `mise.toml` pins Node. The npm scripts are `dev` (port 3000, `strictPort`),
      `build`, `typecheck`, `lint` and `test`.
+   - TypeScript is pinned to 6.0.3. `typescript-eslint` 8.73 supports
+     `>=4.8.4 <6.1.0`, so TypeScript 7 waits for it (see [Risks](#risks)).
 2. **`build: add StyleX`**
    - Add `@stylexjs/stylex` and `@stylexjs/unplugin`, which is the official Vite
      integration (confirmed on npm, 2026-11-17), wired into `vite.config.ts`.
+   - The plugin appends StyleX's CSS to a stylesheet the bundle already has. With
+     none, it writes an unlinked `assets/stylex.css`. Since `src/` has no `.css`
+     files, `vite.config.ts` defines a `virtual:stylesheet` module (an empty
+     stylesheet, imported once in `main.tsx`) for it to append to. The build then
+     emits one hashed CSS file, linked from `index.html`. The dev server serves
+     StyleX's CSS through the plugin's own `virtual:stylex.css`.
+   - `tsconfig.node.json` uses `bundler` resolution, because the plugin's type
+     declarations don't resolve under `nodenext`.
    - Add `src/theme/tokens.stylex.ts` with the navbar height, pane widths and spacing.
    - The root container is a fixed-to-viewport flex column, styled with StyleX (see the
      spec's [Styling](spec.md#styling)).
