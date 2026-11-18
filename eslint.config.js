@@ -26,6 +26,20 @@ export default tseslint.config(
     settings: { react: { version: 'detect' } },
     plugins: { '@stylexjs': stylex },
     rules: {
+      // TanStack Router's control flow is thrown: redirect() and notFound().
+      '@typescript-eslint/only-throw-error': [
+        'error',
+        {
+          allow: [
+            { from: 'package', package: '@tanstack/router-core', name: 'Redirect' },
+            {
+              from: 'package',
+              package: '@tanstack/router-core',
+              name: 'NotFoundError',
+            },
+          ],
+        },
+      ],
       // Every style is StyleX (spec: Styling).
       '@stylexjs/valid-styles': 'error',
       '@stylexjs/valid-shorthands': 'error',

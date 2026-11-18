@@ -37,8 +37,10 @@
   Compose v5.1 are running, and the user can reach the daemon through the `docker`
   group.
 - **Local URLs:** the gateway is at `http://localhost:8080` and Dex at
-  `http://localhost:5556/dex`. The Dex client is `civil-os-dev`, with redirect
-  `http://localhost:3000/callback`. The test user is `dev@example.com`.
+  `http://localhost:5556/dex`. The Dex client is `record-keeper-dev`, a public client
+  with redirect `http://localhost:3000/callback`, added in civil-os #60. (The plan
+  first named `civil-os-dev`, which is confidential, and the local Dex didn't allow
+  CORS, so a browser sign-in couldn't finish.) The test user is `dev@example.com`.
 
 ## The SDK release
 
@@ -154,8 +156,14 @@ PRs 4 to 6 are vertical slices, each usable in the app when merged.
      Connect client.
 2. **`feat: sign in with oidc-client-ts`**
    - `src/auth.ts` sets up `UserManager` exactly as the spec's [Auth](spec.md#auth)
-     says: `localStorage` user store, scope `openid profile email offline_access`, and
-     `automaticSilentRenew` with no silent redirect URI.
+     says: `localStorage` user store, scope `openid profile email offline_access`.
+   - `automaticSilentRenew` is **off**, not on as first written. With no
+     `silent_redirect_uri`, `oidc-client-ts` defaults it to `redirect_uri`, so its
+     automatic renew does an iframe renew against `/callback` when there's no refresh
+     token. Renewal is done by `Auth` instead, with the refresh token only. The spec is
+     corrected to match.
+   - A refresh response with no `id_token` keeps the old one in `oidc-client-ts`, so a
+     session is judged by the ID token's own `exp` claim.
    - The root `beforeLoad` check and the `/callback` route are added, with a minimal
      router (`/` redirects to a placeholder `/parcels`), so sign-in can be tested.
 3. **`feat: renew sessions and sync tabs`**, following

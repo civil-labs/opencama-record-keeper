@@ -25,7 +25,7 @@ npm run dev       # http://localhost:3000
 ```
 
 The dev server must run on port 3000, the redirect URI registered for the local
-stack's `civil-os-dev` client.
+stack's `record-keeper-dev` client (a public client, added in civil-os #60).
 
 | Script | What |
 |---|---|

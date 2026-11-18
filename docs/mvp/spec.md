@@ -37,7 +37,7 @@ differs between deployments, so one built image serves any instance.
 ```json
 {
   "gatewayUrl": "http://localhost:8080",
-  "clientId": "civil-os-dev",
+  "clientId": "record-keeper-dev",
   "basemapStyleUrl": "https://tiles.openfreemap.org/styles/positron"
 }
 ```
@@ -53,7 +53,10 @@ differs between deployments, so one built image serves any instance.
   that instance's `CIVIL_OS_GATEWAY_ALLOWED_CLIENT_IDS`, or the gateway rejects every
   request.
 - **Dev runs on the Vite dev server, port 3000.** It uses the local Dex client
-  `civil-os-dev`, whose registered redirect is `http://localhost:3000/callback`.
+  `record-keeper-dev`, a public client whose registered redirect is
+  `http://localhost:3000/callback`. The local Dex allows CORS from that origin, and
+  the gateway allows the client ID (civil-os #60). civil-os's own `civil-os-dev` is a
+  confidential client, which a browser can't use.
 
 These are the civil-os local-stack values: the compose stack publishes the
 gateway on `127.0.0.1:8080` and Dex on `127.0.0.1:5556`.
@@ -69,8 +72,10 @@ gateway on `127.0.0.1:8080` and Dex on `127.0.0.1:5556`.
      `offline_access` asks for a refresh token. Dex issues one only when it's requested.
    - `userStore: new WebStorageStateStore({ store: window.localStorage })`, so a session
      survives new tabs and browser restarts until its tokens expire;
-   - `automaticSilentRenew: true`, with no `silent_redirect_uri` (see
-     [Session renewal](#session-renewal)).
+   - `automaticSilentRenew: false`. The app renews with the refresh token itself (see
+     [Session renewal](#session-renewal)). The library's automatic renew falls back to an
+     iframe against `redirect_uri` when there's no refresh token, which this spec rules
+     out.
 2. **Before any route renders:** if there's no unexpired user, call `signinRedirect`,
    saving the current URL in `state`. `/callback` finishes the sign-in and returns the
    user to that URL.
@@ -102,8 +107,10 @@ renewal, and after sign-out.
 **Refresh tokens are used if the IdP issues them.** Whether there is one is decided
 by the sign-in response, not by config.
 
-- **With a refresh token:** `automaticSilentRenew` uses the refresh-token grant shortly
-  before the tokens expire. No redirect and no iframe are involved.
+- **With a refresh token:** the app uses the refresh-token grant (`signinSilent`, which
+  uses the refresh token when the stored user has one) shortly before the tokens expire,
+  on `oidc-client-ts`'s `accessTokenExpiring` event. Dex gives access and ID tokens the
+  same lifetime. No redirect and no iframe are involved.
   - The gateway needs an **ID token**, so a renewal only counts if its response
     includes a new `id_token`. If it doesn't, and the stored ID token has expired, it's
     treated as a failed renewal.
@@ -154,11 +161,11 @@ From the same production discovery document. These facts shape the auth design a
 | `end_session_endpoint`, `revocation_endpoint` | absent | Sign-out clears the app's session, then redirects to sign-in (see [Sign-out](#sign-out)). |
 | `introspection_endpoint` | present | Not used. Introspection is for resource servers, not browser clients. |
 
-**Still to confirm against the local stack,** which runs the same Dex:
+**Confirmed against the local stack** (2026-11-18), which runs the same Dex:
 
 - a public client gets a refresh token when it requests `offline_access`;
 - the refresh response includes a new `id_token`, which the gateway needs (see
-  [Session renewal](#session-renewal)).
+  [Session renewal](#session-renewal)), and a rotated refresh token.
 
 ### Security of `localStorage`
 
