@@ -1,6 +1,7 @@
 import stylex from '@stylexjs/unplugin/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig, type Plugin } from 'vite'
+import type { Plugin } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 // StyleX appends its compiled CSS to a stylesheet the bundle already has, and
 // the app has no stylesheet of its own (all styles are StyleX). This virtual
@@ -22,4 +23,5 @@ export default defineConfig({
   plugins: [stylesheet(), stylex(), react()],
   server: { port: 3000, strictPort: true },
   preview: { port: 3000, strictPort: true },
+  test: { environment: 'jsdom' },
 })
