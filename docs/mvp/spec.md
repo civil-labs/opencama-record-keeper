@@ -683,9 +683,10 @@ route's loader.
 
 ## Styling
 
-**Every style the app writes is StyleX.** There are no `.css` files in `src/`, no
-CSS modules, no `<style>` tags, no `style` attributes in `index.html`, and no inline
-`style` props.
+**Every style the app writes is StyleX.** There are no CSS modules, no `<style>`
+tags, no `style` attributes in `index.html`, and no inline `style` props. The only
+`.css` file in `src/` is `src/stylex.css`, which is empty and holds no styles (see
+**Build** below).
 
 - **Where styles live:** each component declares its styles with `stylex.create` in
   the same file, and applies them with `{...stylex.props(...)}`.
@@ -719,12 +720,16 @@ CSS modules, no `<style>` tags, no `style` attributes in `index.html`, and no in
   | The basemap's look | It's set by the Positron style JSON, outside the app. |
 - **Enforced by lint,** so the rule doesn't depend on review:
   - `@stylexjs/eslint-plugin` checks that every style is valid StyleX;
-  - `no-restricted-imports` rejects any `*.css` import except `maplibre-gl/dist/maplibre-gl.css`;
+  - `no-restricted-imports` rejects any `*.css` import except `maplibre-gl/dist/maplibre-gl.css` and `src/stylex.css`;
   - `react/forbid-dom-props` and `react/forbid-component-props` reject `style` and `className`, so styling only comes from `stylex.props`.
 - **Build:**
   - StyleX compiles through its official Vite integration, which at the time of
     writing is `@stylexjs/unplugin`. Confirm the current recommended package against
     the StyleX docs when building.
+  - The plugin doesn't emit a stylesheet of its own. It appends StyleX's CSS to a CSS
+    file the bundle already has, and with none it writes a stylesheet `index.html`
+    never links. So `src/stylex.css` exists, empty, imported once in `main.tsx`, to
+    give the bundle that file. A comment in it says why, and that no styles go there.
   - The production build emits StyleX's CSS and MapLibre's CSS as static files, so
     the CSP's `style-src 'self'` is enough.
 

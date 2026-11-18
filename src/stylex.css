@@ -1,0 +1,14 @@
+/*
+ * This file is intentionally empty. Don't add styles here: every style in the
+ * app is StyleX, declared next to the component that uses it.
+ *
+ * Why it exists: @stylexjs/unplugin doesn't emit a stylesheet of its own. At
+ * build time it appends the compiled StyleX CSS to a CSS file the bundle
+ * already has. With no CSS in the bundle, it falls back to writing an
+ * assets/stylex.css that index.html never links, so the built app would be
+ * unstyled. Importing this file once, in main.tsx, gives the entry chunk a CSS
+ * asset to append to. The build then emits one hashed CSS file, linked from
+ * index.html.
+ *
+ * In dev, the plugin serves StyleX's CSS itself, at /virtual:stylex.css.
+ */
