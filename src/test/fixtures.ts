@@ -23,6 +23,8 @@ export const IDS = {
   address: '20000000-0000-4000-8000-000000000002',
   partyA: '30000000-0000-4000-8000-000000000002',
   partyB: '30000000-0000-4000-8000-000000000003',
+  partyC: '30000000-0000-4000-8000-000000000004',
+  code: '92000000-0000-4000-8000-000000000002',
   improvement: '53000000-0000-4000-8000-000000000002',
   parcel: 'a0000000-0000-4000-8000-000000000002',
   parcelNoGeometry: 'a0000000-0000-4000-8000-000000000021',
@@ -132,6 +134,45 @@ export function fakeCivilOs(
       },
     })
     router.service(RealPropertyTransfersService, {
+      getTransfersById: (req) => {
+        record('getTransfersById', req)
+        return {
+          transfers: req.transferIds
+            .filter((id) => id === IDS.transfer(3))
+            .map((id) => ({
+              transferId: id,
+              transferTime: { seconds: 1693526400n, nanos: 0 },
+              transferAmount: '520000.0000',
+              recordings: [
+                { book: 'FX-B3', page: '3', uri: 'https://recordings.example.invalid/FX-3' },
+                { book: 'FX-B4', uri: 'javascript:alert(1)' },
+              ],
+              codes: [{ codeId: IDS.code, name: 'Fixture Unqualified', type: { name: 'Fixture Qualification' } }],
+              parcels: [
+                {
+                  parcelId: IDS.parcel,
+                  grantors: [{ partyId: IDS.partyA, transferredShare: '1.0000' }],
+                  grantees: [
+                    { partyId: IDS.partyB, transferredShare: '0.5000' },
+                    { partyId: IDS.partyC, transferredShare: '0.5000' },
+                  ],
+                },
+              ],
+              improvements: [
+                {
+                  improvementId: IDS.improvement,
+                  grantors: [{ partyId: IDS.partyA, transferredShare: '1.0000' }],
+                  grantees: [],
+                },
+              ],
+              parties: [
+                { partyId: IDS.partyA, name: 'Fixture Seller', mailingAddress: '1 Old Road' },
+                { partyId: IDS.partyB, name: 'Fixture Buyer' },
+                { partyId: IDS.partyC },
+              ],
+            })),
+        }
+      },
       getTransfersByParcelId: (req) => {
         record('getTransfersByParcelId', req)
         if (options.failNextTransfersPage && req.after) {

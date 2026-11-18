@@ -21,6 +21,7 @@ import {
   zoningQuery,
 } from './api/lookups.ts'
 import { parcelExtentQuery, parcelQuery } from './api/parcels.ts'
+import { transferQuery } from './api/transfers.ts'
 import type { Auth } from './auth.ts'
 import type { Config } from './config.ts'
 import { currentDefinitionId, type DefinitionChoice } from './neighborhoodDefinition.ts'
@@ -32,6 +33,7 @@ import { NotBuiltYet } from './routes/NotBuiltYet.tsx'
 import { NotFound } from './routes/NotFound.tsx'
 import { ParcelPane } from './routes/ParcelPane.tsx'
 import { ParcelsLayout } from './routes/ParcelsLayout.tsx'
+import { TransferPage } from './routes/TransferPage.tsx'
 import { spacing } from './theme/tokens.stylex.ts'
 
 export interface RouterContext {
@@ -229,7 +231,12 @@ const transferRoute = createRoute({
     parse: ({ transferId }) => ({ transferId: parseUuid(transferId) }),
     stringify: ({ transferId }) => ({ transferId }),
   },
-  component: () => <NotBuiltYet page="Transfer" />,
+  loader: async ({ context: { queryClient, transport }, params: { transferId } }) => {
+    const data = await queryClient.ensureQueryData(transferQuery(transport, transferId))
+    if (!data.transfers.some((t) => t.transferId === transferId)) throw notFound()
+  },
+  component: TransferPage,
+  notFoundComponent: () => <p>No transfer with this ID.</p>,
 })
 
 const landUseRoute = createRoute({
