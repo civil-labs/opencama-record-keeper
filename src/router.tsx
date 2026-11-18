@@ -7,8 +7,10 @@ import {
   createRouter,
   Outlet,
   redirect,
+  useRouteContext,
 } from '@tanstack/react-router'
 import type { Auth } from './auth.ts'
+import { Navbar } from './components/Navbar.tsx'
 import { Callback, CallbackError } from './routes/Callback.tsx'
 import { spacing } from './theme/tokens.stylex.ts'
 
@@ -66,10 +68,14 @@ const appRoute = createRoute({
     if (token === null) await context.auth.signIn(location.href)
   },
   component: function AppLayout() {
+    const { auth } = useRouteContext({ from: '/app' })
     return (
-      <main {...stylex.props(styles.page)}>
-        <Outlet />
-      </main>
+      <>
+        <Navbar auth={auth} />
+        <main {...stylex.props(styles.page)}>
+          <Outlet />
+        </main>
+      </>
     )
   },
 })

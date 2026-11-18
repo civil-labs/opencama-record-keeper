@@ -70,6 +70,18 @@ export function safeReturnTo(state: unknown): string {
   return returnTo
 }
 
+/**
+ * The name the navbar shows: `name`, falling back to `preferred_username`,
+ * then `email`, then `sub` (spec: Navbar).
+ */
+export function userDisplayName(user: User): string {
+  const { name, preferred_username, email, sub } = user.profile
+  for (const value of [name, preferred_username, email]) {
+    if (typeof value === 'string' && value.trim() !== '') return value
+  }
+  return sub
+}
+
 /** The settings the spec fixes for the UserManager. */
 export function userManagerSettings(
   authority: string,
@@ -251,6 +263,16 @@ export class Auth {
   async clearAndSignIn(returnTo: string): Promise<never> {
     if (!this.redirecting) await this.userManager.removeUser()
     return this.signIn(returnTo)
+  }
+
+  /**
+   * Sign-out (spec: Sign-out): clear the app's session, then go straight to
+   * sign-in, returning to /parcels. Dex has no session or logout endpoint of its
+   * own, and the authorize request doesn't carry the refresh token, so the user
+   * has to sign in again. Other tabs see the user removed and follow.
+   */
+  signOut(): Promise<never> {
+    return this.clearAndSignIn(DEFAULT_RETURN_TO)
   }
 
   /** Finishes sign-in on /callback, and returns the path to go back to. */

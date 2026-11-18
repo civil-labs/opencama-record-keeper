@@ -197,3 +197,26 @@ describe('tab sync', () => {
     expect(um.signinRedirect).not.toHaveBeenCalled()
   })
 })
+
+describe('sign-out', () => {
+  test('removes the stored user, then redirects to sign-in returning to /parcels', async () => {
+    const { um, auth } = setup(valid())
+    await auth.start(new EventTarget() as Window)
+    const order: string[] = []
+    um.removeUser.mockImplementation(() => {
+      order.push('removeUser')
+      um.stored = null
+      return Promise.resolve()
+    })
+    um.signinRedirect.mockImplementation(() => {
+      order.push('signinRedirect')
+      return Promise.resolve()
+    })
+    void auth.signOut()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(order).toEqual(['removeUser', 'signinRedirect'])
+    expect(um.signinRedirect).toHaveBeenCalledWith({
+      state: { returnTo: '/parcels' },
+    })
+  })
+})
