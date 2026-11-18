@@ -112,11 +112,11 @@ PRs 4 to 6 are vertical slices, each usable in the app when merged.
    - Add `@stylexjs/stylex` and `@stylexjs/unplugin`, which is the official Vite
      integration (confirmed on npm, 2026-11-17), wired into `vite.config.ts`.
    - The plugin appends StyleX's CSS to a stylesheet the bundle already has. With
-     none, it writes an unlinked `assets/stylex.css`. Since `src/` has no `.css`
-     files, `vite.config.ts` defines a `virtual:stylesheet` module (an empty
-     stylesheet, imported once in `main.tsx`) for it to append to. The build then
-     emits one hashed CSS file, linked from `index.html`. The dev server serves
-     StyleX's CSS through the plugin's own `virtual:stylex.css`.
+     none, it writes an unlinked `assets/stylex.css`. So `src/stylex.css` is an empty
+     file, imported once in `main.tsx`, for it to append to. A comment in it explains
+     why. The build then emits one hashed CSS file, linked from `index.html`. The dev
+     server serves StyleX's CSS through the plugin's own `virtual:stylex.css`. (The
+     owner chose a real file over a virtual module, so the reason is easy to find.)
    - `tsconfig.node.json` uses `bundler` resolution, because the plugin's type
      declarations don't resolve under `nodenext`.
    - Add `src/theme/tokens.stylex.ts` with the navbar height, pane widths and spacing.
@@ -125,8 +125,8 @@ PRs 4 to 6 are vertical slices, each usable in the app when merged.
 3. **`build: add ESLint with the StyleX and styling rules`**
    - Flat config with `typescript-eslint`, `eslint-plugin-react`,
      `eslint-plugin-react-hooks` and `@stylexjs/eslint-plugin`.
-   - `no-restricted-imports` allows only `maplibre-gl/dist/maplibre-gl.css` among
-     `*.css` imports.
+   - `no-restricted-imports` allows only `maplibre-gl/dist/maplibre-gl.css` and
+     `./stylex.css` among `*.css` imports.
    - `react/forbid-dom-props` and `react/forbid-component-props` forbid `style` and
      `className`.
 4. **`build: add Vitest and React Testing Library`**, with `jsdom` and one smoke test

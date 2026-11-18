@@ -38,8 +38,9 @@ stack's `civil-os-dev` client.
 ## Styling
 
 Every style is [StyleX](https://stylexjs.com), declared next to the component that
-uses it. There are no `.css` files in `src/`, and no `style` or `className` props.
-Lint enforces both. The only third-party stylesheet is MapLibre's.
+uses it. There are no `style` or `className` props, and lint enforces that. The
+only stylesheets are MapLibre's and `src/stylex.css`, which is empty on purpose: its
+comment explains why it exists.
 
 ## Design docs
 

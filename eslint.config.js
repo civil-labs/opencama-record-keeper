@@ -34,15 +34,20 @@ export default tseslint.config(
       '@stylexjs/no-lookahead-selectors': 'error',
       '@stylexjs/no-conflicting-props': 'error',
       '@stylexjs/enforce-extension': 'error',
-      // No stylesheets except MapLibre's, which styles DOM StyleX can't reach.
+      // No stylesheets except MapLibre's, which styles DOM StyleX can't reach,
+      // and src/stylex.css, the empty file StyleX's output is appended to.
       'no-restricted-imports': [
         'error',
         {
           patterns: [
             {
-              group: ['*.css', '!maplibre-gl/dist/maplibre-gl.css'],
+              group: [
+                '*.css',
+                '!maplibre-gl/dist/maplibre-gl.css',
+                '!./stylex.css',
+              ],
               message:
-                'Styles are StyleX. The only CSS import allowed is maplibre-gl/dist/maplibre-gl.css.',
+                'Styles are StyleX. The only CSS imports allowed are maplibre-gl/dist/maplibre-gl.css and src/stylex.css.',
             },
           ],
         },
