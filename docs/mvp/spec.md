@@ -397,8 +397,13 @@ details are in a pane on the right.
     `ParcelsService/GetEstimatedParcelsExtentWGS84` and uses `minX, minY, maxX, maxY`.
   - If both fail, the map pane shows the error and no map. The detail pane still
     works.
-- `maxBounds` is the bounds expanded by 10% on each side. The slack lets a parcel on
-  the edge of the jurisdiction be centered.
+- `maxBounds` is the bounds, together with the view that fits them, expanded by 10% on
+  each side. The slack lets a parcel on the edge of the jurisdiction be centered.
+  - The fitted view is included because MapLibre keeps the whole viewport inside
+    `maxBounds`. With only the bounds padded, an instance whose shape differs from the
+    map pane's (a tall instance in a wide pane) forces a zoom-in, and the whole
+    instance can never be shown. It's set once the map has loaded and fitted the
+    bounds.
 - **With no parcel selected,** the map starts centered on the center of the bounds,
   zoomed so the whole bounds fit.
 - **With a parcel selected,** the map starts on that parcel (see [Selection](#selection)).

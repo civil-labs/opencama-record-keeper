@@ -277,6 +277,20 @@ protobuf JSON form, where an `int64` is a string, so `JSON.stringify` never sees
    - The camera rule and the highlight filter.
    - The map stays mounted across selections.
 
+**As built (steps 1–3):**
+
+- Routes that lay out the whole area below the navbar set `staticData.fullBleed`; the
+  signed-in `<main>` then drops its padding and scrolling. The router context gains
+  `config` and `instance`, for the map.
+- MapLibre 6 finds its worker next to its own module, which the bundle doesn't have.
+  `setWorkerUrl` points it at the worker Vite emits (`?url`), so it loads same-origin as
+  a module worker, with no `blob:` URL for the CSP to allow.
+- `maxBounds` covers the fitted view as well as the bounds (spec corrected). Padding the
+  bounds alone forced a zoom-in on the synthetic instance (tall, in a wide pane), cutting
+  off its top and bottom rows.
+- `src/map/tiles.ts` holds the tile URL and `transformRequest`, and `src/api/parcels.ts`
+  the parcel query options.
+
 **Unit tests:** `bounds.ts`; `selection.ts` (merging clipped boxes; the three camera
 cases); `transformRequest` and the tile URL; and the routing test that the layout
 isn't remounted between `/parcels/A`, `/parcels/B` and `/parcels`.

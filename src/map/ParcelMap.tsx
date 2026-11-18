@@ -1,13 +1,22 @@
 // The parcels map (spec: Map). One MapLibre instance per mount of the parcels
 // layout; it survives selection changes because the layout does.
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { useTransport } from '@connectrpc/connect-query'
 import * as stylex from '@stylexjs/stylex'
+import { useQuery } from '@tanstack/react-query'
 import { useRouteContext } from '@tanstack/react-router'
 import { Map as MapLibreMap, setWorkerUrl, type ErrorEvent } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { estimatedExtentQuery } from '../api/parcels.ts'
 import { currentPath } from '../auth.ts'
 import { ErrorAlert } from '../components/ErrorAlert.tsx'
+import {
+  boundsFromExtent,
+  boundsFromMetadata,
+  maxBoundsFor,
+  type Bounds,
+} from './bounds.ts'
 import { EMPTY_STYLE, PARCEL_SOURCE, parcelLayers, parcelSource } from './style.ts'
 import { createTransformRequest, parcelTilesUrl } from './tiles.ts'
 
@@ -43,7 +52,38 @@ function errorSourceId(event: ErrorEvent): string | undefined {
   return typeof sourceId === 'string' ? sourceId : undefined
 }
 
+/** Padding, in pixels, around the bounds when the whole instance is shown. */
+const BOUNDS_PADDING_PX = 24
+
+/**
+ * Finds the instance's bounds, then draws the map. The bounds come from the
+ * instance metadata, or else the estimated parcel extent. If neither is
+ * usable, the map pane shows why and no map; the detail pane still works.
+ */
 export function ParcelMap() {
+  const { instance } = useRouteContext({ from: '/app/parcels' })
+  const metadataBounds = useMemo(
+    () => boundsFromMetadata(instance.metadata),
+    [instance.metadata],
+  )
+  const extent = useQuery({
+    ...estimatedExtentQuery(useTransport()),
+    enabled: metadataBounds === null,
+  })
+  const extentBounds = useMemo(
+    () => (extent.data ? boundsFromExtent(extent.data) : null),
+    [extent.data],
+  )
+  if (metadataBounds) return <MapView bounds={metadataBounds} />
+  if (extent.isError) return <ErrorAlert error={extent.error} />
+  if (extent.isPending) return <p>Loading map…</p>
+  if (!extentBounds) {
+    return <ErrorAlert error={new Error('The instance reports no usable bounds.')} />
+  }
+  return <MapView bounds={extentBounds} />
+}
+
+function MapView({ bounds }: { bounds: Bounds }) {
   const { config, auth } = useRouteContext({ from: '/app/parcels' })
   const container = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<unknown>(null)
@@ -56,6 +96,9 @@ export function ParcelMap() {
       map = new MapLibreMap({
         container: container.current,
         style: config.basemapStyleUrl,
+        // Start on the whole instance.
+        bounds,
+        fitBoundsOptions: { padding: BOUNDS_PADDING_PX },
         transformRequest: createTransformRequest(
           config.gatewayUrl,
           () => auth.getIdToken(),
@@ -69,6 +112,12 @@ export function ParcelMap() {
       setError(caught)
       return
     }
+
+    // Never pan far outside the instance. Set once the map has fitted the
+    // bounds, so maxBounds can include the fitted view (see maxBoundsFor).
+    map.once('load', () => {
+      map.setMaxBounds(maxBoundsFor(bounds, map.getBounds().toArray().flat() as Bounds))
+    })
 
     // The parcel layers go on every style that loads: the basemap, or the
     // empty fallback below.
@@ -94,7 +143,7 @@ export function ParcelMap() {
     })
 
     return () => map.remove()
-  }, [config, auth])
+  }, [config, auth, bounds])
 
   return (
     <>
