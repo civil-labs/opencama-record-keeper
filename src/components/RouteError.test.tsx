@@ -8,12 +8,19 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, expect, test } from 'vitest'
+import { afterEach, expect, test, vi } from 'vitest'
 import { RouteError } from './RouteError.tsx'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 test('shows the Connect code and message, and Retry loads the page again', async () => {
+  // The router logs a failed loader's error. Here the failure is the point of
+  // the test, so capture the log instead of printing it.
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+  const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {})
   let calls = 0
   const fetchRecord = () => {
     calls += 1
@@ -48,4 +55,6 @@ test('shows the Connect code and message, and Retry loads the page again', async
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
   expect(await screen.findByText('the record')).toBeDefined()
   expect(calls).toBe(2)
+  const logged = [...consoleError.mock.calls, ...consoleWarn.mock.calls].flat()
+  expect(logged.some((arg) => arg instanceof ConnectError)).toBe(true)
 })

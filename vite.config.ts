@@ -6,5 +6,5 @@ export default defineConfig({
   plugins: [stylex(), react()],
   server: { port: 3000, strictPort: true },
   preview: { port: 3000, strictPort: true },
-  test: { environment: 'jsdom' },
+  test: { environment: 'jsdom', setupFiles: ['src/test/setup.ts'] },
 })
