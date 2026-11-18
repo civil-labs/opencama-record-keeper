@@ -13,6 +13,7 @@ import {
   useRouteContext,
   type RouterHistory,
 } from '@tanstack/react-router'
+import { addressQuery } from './api/addresses.ts'
 import type { InstanceMetadata } from './api/instance.ts'
 import {
   landUsesQuery,
@@ -21,17 +22,21 @@ import {
   zoningQuery,
 } from './api/lookups.ts'
 import { parcelExtentQuery, parcelQuery } from './api/parcels.ts'
+import { partyQuery } from './api/parties.ts'
+import { transferQuery } from './api/transfers.ts'
 import type { Auth } from './auth.ts'
 import type { Config } from './config.ts'
 import { currentDefinitionId, type DefinitionChoice } from './neighborhoodDefinition.ts'
 import { Navbar } from './components/Navbar.tsx'
 import { RouteError } from './components/RouteError.tsx'
+import { AddressPage } from './routes/AddressPage.tsx'
 import { Callback, CallbackError } from './routes/Callback.tsx'
 import { LandUsePage, NeighborhoodPage, ZoningPage } from './routes/LookupPage.tsx'
-import { NotBuiltYet } from './routes/NotBuiltYet.tsx'
 import { NotFound } from './routes/NotFound.tsx'
 import { ParcelPane } from './routes/ParcelPane.tsx'
 import { ParcelsLayout } from './routes/ParcelsLayout.tsx'
+import { PartyPage } from './routes/PartyPage.tsx'
+import { TransferPage } from './routes/TransferPage.tsx'
 import { spacing } from './theme/tokens.stylex.ts'
 
 export interface RouterContext {
@@ -209,7 +214,12 @@ const addressRoute = createRoute({
     parse: ({ addressId }) => ({ addressId: parseUuid(addressId) }),
     stringify: ({ addressId }) => ({ addressId }),
   },
-  component: () => <NotBuiltYet page="Address" />,
+  loader: async ({ context: { queryClient, transport }, params: { addressId } }) => {
+    const data = await queryClient.ensureQueryData(addressQuery(transport, addressId))
+    if (!(addressId in data.addresses)) throw notFound()
+  },
+  component: AddressPage,
+  notFoundComponent: () => <p>No address with this ID.</p>,
 })
 
 const partyRoute = createRoute({
@@ -219,7 +229,12 @@ const partyRoute = createRoute({
     parse: ({ partyId }) => ({ partyId: parseUuid(partyId) }),
     stringify: ({ partyId }) => ({ partyId }),
   },
-  component: () => <NotBuiltYet page="Party" />,
+  loader: async ({ context: { queryClient, transport }, params: { partyId } }) => {
+    const data = await queryClient.ensureQueryData(partyQuery(transport, partyId))
+    if (!(partyId in data.parties)) throw notFound()
+  },
+  component: PartyPage,
+  notFoundComponent: () => <p>No party with this ID.</p>,
 })
 
 const transferRoute = createRoute({
@@ -229,7 +244,12 @@ const transferRoute = createRoute({
     parse: ({ transferId }) => ({ transferId: parseUuid(transferId) }),
     stringify: ({ transferId }) => ({ transferId }),
   },
-  component: () => <NotBuiltYet page="Transfer" />,
+  loader: async ({ context: { queryClient, transport }, params: { transferId } }) => {
+    const data = await queryClient.ensureQueryData(transferQuery(transport, transferId))
+    if (!data.transfers.some((t) => t.transferId === transferId)) throw notFound()
+  },
+  component: TransferPage,
+  notFoundComponent: () => <p>No transfer with this ID.</p>,
 })
 
 const landUseRoute = createRoute({

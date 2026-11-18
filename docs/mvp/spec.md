@@ -654,6 +654,9 @@ codes.
 **Parties section:** each `TransferParty`, with a link to `/parties/:partyId`, its name,
 and its mailing address as of the transfer.
 
+**Not found:** `transfers` is a list, not a map. A transfer ID missing from it shows
+"No transfer with this ID".
+
 ### Land use, zoning, neighborhood
 
 **Data:**
@@ -795,6 +798,7 @@ src/
     instance.ts      # the one plain call made before auth: GetInstanceMetadata
     lookups.ts       # query options for the whole-table lookups, shared by loaders and pages
     parcels.ts       # query options for parcels, their extents and feature lookups
+    transfers.ts  addresses.ts  parties.ts  # record queries and paginated section hooks
   links.tsx          # <RecordLink>, its type-to-route table, feature-id bigint/number helpers
   neighborhoodDefinition.ts  # selected definition: memory + localStorage store, default rule
   theme/
@@ -811,6 +815,7 @@ src/
     AddressPage.tsx  PartyPage.tsx  Callback.tsx  NotFound.tsx
   components/
     Fields.tsx       # the <dl> renderer that follows the rendering rule
+    PagedList.tsx    # any paginated section: first-page cursor, states, "More"
     TransfersList.tsx  # paginated transfers table, shared by the parcel pane and party page
     ErrorAlert.tsx
     Navbar.tsx       # app name link, user's name, sign-out button, with its StyleX styles

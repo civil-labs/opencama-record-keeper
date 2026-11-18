@@ -1,6 +1,8 @@
 // A fake Civil OS for page tests: a few lookups and parcels, served through a
 // Connect router transport. Synthetic data only.
 import {
+  AddressesService,
+  PartiesService,
   LandUsesService,
   NeighborhoodService,
   ParcelsService,
@@ -23,6 +25,8 @@ export const IDS = {
   address: '20000000-0000-4000-8000-000000000002',
   partyA: '30000000-0000-4000-8000-000000000002',
   partyB: '30000000-0000-4000-8000-000000000003',
+  partyC: '30000000-0000-4000-8000-000000000004',
+  code: '92000000-0000-4000-8000-000000000002',
   improvement: '53000000-0000-4000-8000-000000000002',
   parcel: 'a0000000-0000-4000-8000-000000000002',
   parcelNoGeometry: 'a0000000-0000-4000-8000-000000000021',
@@ -41,6 +45,8 @@ export function fakeCivilOs(
     parcelDelayMs?: number
     /** The definitions call fails, or returns none. */
     definitions?: 'fail' | 'none'
+    /** The address page's parties section fails. */
+    failPartiesByAddress?: boolean
     /** Make every transfers page after the first fail. */
     failNextTransfersPage?: boolean
     register?: (router: ConnectRouter) => void
@@ -132,6 +138,57 @@ export function fakeCivilOs(
       },
     })
     router.service(RealPropertyTransfersService, {
+      getTransfersById: (req) => {
+        record('getTransfersById', req)
+        return {
+          transfers: req.transferIds
+            .filter((id) => id === IDS.transfer(3))
+            .map((id) => ({
+              transferId: id,
+              transferTime: { seconds: 1693526400n, nanos: 0 },
+              transferAmount: '520000.0000',
+              recordings: [
+                { book: 'FX-B3', page: '3', uri: 'https://recordings.example.invalid/FX-3' },
+                { book: 'FX-B4', uri: 'javascript:alert(1)' },
+              ],
+              codes: [{ codeId: IDS.code, name: 'Fixture Unqualified', type: { name: 'Fixture Qualification' } }],
+              parcels: [
+                {
+                  parcelId: IDS.parcel,
+                  grantors: [{ partyId: IDS.partyA, transferredShare: '1.0000' }],
+                  grantees: [
+                    { partyId: IDS.partyB, transferredShare: '0.5000' },
+                    { partyId: IDS.partyC, transferredShare: '0.5000' },
+                  ],
+                },
+              ],
+              improvements: [
+                {
+                  improvementId: IDS.improvement,
+                  grantors: [{ partyId: IDS.partyA, transferredShare: '1.0000' }],
+                  grantees: [],
+                },
+              ],
+              parties: [
+                { partyId: IDS.partyA, name: 'Fixture Seller', mailingAddress: '1 Old Road' },
+                { partyId: IDS.partyB, name: 'Fixture Buyer' },
+                { partyId: IDS.partyC },
+              ],
+            })),
+        }
+      },
+      getTransfersByPartyId: (req) => {
+        record('getTransfersByPartyId', req)
+        return {
+          edges: [
+            {
+              cursor: 't1',
+              node: { transferId: IDS.transfer(3), transferAmount: '520000.0000' },
+            },
+          ],
+          pageInfo: { hasNextPage: false },
+        }
+      },
       getTransfersByParcelId: (req) => {
         record('getTransfersByParcelId', req)
         if (options.failNextTransfersPage && req.after) {
@@ -158,6 +215,82 @@ export function fakeCivilOs(
             hasPreviousPage: start > 0,
             endCursor: edges.length ? String(end) : undefined,
           },
+        }
+      },
+    })
+    router.service(AddressesService, {
+      getAddressesById: (req) => {
+        record('getAddressesById', req)
+        const addresses: Record<string, object> = {}
+        if (req.addressIds.includes(IDS.address)) {
+          addresses[IDS.address] = {
+            addressId: IDS.address,
+            formattedAddress: '2 Fixture Way, Testville ZZ000',
+            addressLine1: '2 Fixture Way',
+            locality: 'Testville',
+            postalCode: 'ZZ000',
+            administrativeArea: { code: 'ZZ-FX', name: 'Fixture Province' },
+            country: { code: 'ZZ', name: 'Testland' },
+            coordinates: { latitude: -39.9998, longitude: -139.9994 },
+          }
+        }
+        return { addresses }
+      },
+      getParcelsByAddressId: (req) => {
+        record('getParcelsByAddressId', req)
+        return {
+          edges: [{ cursor: 'p1', node: { parcelId: IDS.parcel, featureId: 1002n } }],
+          pageInfo: { hasNextPage: false },
+        }
+      },
+      getImprovementsByAddressId: (req) => {
+        record('getImprovementsByAddressId', req)
+        return {
+          edges: [
+            { cursor: 'i1', node: { improvementId: IDS.improvement, parcelIds: [IDS.parcel] } },
+          ],
+          pageInfo: { hasNextPage: false },
+        }
+      },
+      getPartiesByAddressId: (req) => {
+        record('getPartiesByAddressId', req)
+        if (options.failPartiesByAddress) throw new ConnectError('reader down', Code.Unavailable)
+        return {
+          edges: [
+            {
+              cursor: 'm1',
+              node: { partyId: IDS.partyA, name: 'Fixture Owner 2', mailingAddressId: IDS.address },
+            },
+          ],
+          pageInfo: { hasNextPage: false },
+        }
+      },
+    })
+    router.service(PartiesService, {
+      getPartiesById: (req) => {
+        record('getPartiesById', req)
+        const parties: Record<string, object> = {}
+        if (req.partyIds.includes(IDS.partyA)) {
+          parties[IDS.partyA] = {
+            partyId: IDS.partyA,
+            name: 'Fixture Owner 2',
+            mailingAddressId: IDS.address,
+            mailingAddress: '2 Fixture Way, Testville ZZ000',
+          }
+        }
+        if (req.partyIds.includes(IDS.partyC)) {
+          parties[IDS.partyC] = { partyId: IDS.partyC, name: 'Fixture Owner 4', mailingAddress: 'PO Box 4' }
+        }
+        return { parties }
+      },
+      getParcelsByPartyId: (req) => {
+        record('getParcelsByPartyId', req)
+        return {
+          edges: [
+            { cursor: 'q1', node: { parcelId: IDS.parcel, ownershipShare: '0.5000' } },
+            { cursor: 'q2', node: { parcelId: IDS.parcelNoGeometry, ownershipShare: '1.0000' } },
+          ],
+          pageInfo: { hasNextPage: false },
         }
       },
     })

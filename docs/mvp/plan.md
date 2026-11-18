@@ -370,6 +370,17 @@ changing the definition refetches only the parcel query.
 3. **`feat: party page`**: `PartyPage.tsx`, with fields, a mailing address link, and
    the parcels (with share) and transfers sections. Transfers reuse `TransfersList`.
 
+**As built:**
+
+- `components/PagedList.tsx` holds what every paginated section shares (the unset
+  first-page cursor, loading, error, "None." and "More"); `TransfersList` and the five
+  address and party sections use it.
+- Each record page's not-found message is its route's `notFoundComponent`, so a
+  malformed ID in its path shows the same message, as on the parcels page. The transfer
+  page says "No transfer with this ID" (spec added: the spec gave none).
+- A party's mailing address with no `mailingAddressId` is plain text.
+- `NotBuiltYet` is removed; every route has its page.
+
 **Unit tests:** each page's not-found state; the address page's country and
 administrative-area formatting.
 

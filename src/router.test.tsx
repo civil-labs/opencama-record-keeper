@@ -24,11 +24,6 @@ describe('routes', () => {
     expect(history.length).toBe(1)
   })
 
-  test('a record route with a valid UUID renders its page', async () => {
-    await renderApp(`/addresses/${ID}`)
-    expect(await screen.findByText('Address: not built yet.')).toBeDefined()
-  })
-
   test('/parcels/not-a-uuid says so in the pane, without an API call', async () => {
     const { transport, calls } = noCallsTransport()
     await renderApp('/parcels/not-a-uuid', transport)
@@ -38,16 +33,16 @@ describe('routes', () => {
   })
 
   test.each([
-    '/addresses/not-a-uuid',
-    '/parties/not-a-uuid',
-    '/transfers/not-a-uuid',
-    '/land-uses/not-a-uuid',
-    '/zoning/not-a-uuid',
-    '/neighborhoods/not-a-uuid',
-  ])('%s shows "Not found" without an API call', async (path) => {
+    ['/addresses/not-a-uuid', 'No address with this ID.'],
+    ['/parties/not-a-uuid', 'No party with this ID.'],
+    ['/transfers/not-a-uuid', 'No transfer with this ID.'],
+    ['/land-uses/not-a-uuid', 'Not found'],
+    ['/zoning/not-a-uuid', 'Not found'],
+    ['/neighborhoods/not-a-uuid', 'Not found'],
+  ])('%s says "%s" without an API call', async (path, message) => {
     const { transport, calls } = noCallsTransport()
     await renderApp(path, transport)
-    expect(await screen.findByRole('heading', { name: 'Not found' })).toBeDefined()
+    expect(await screen.findByText(message)).toBeDefined()
     expect(screen.getByRole('navigation')).toBeDefined()
     expect(recordCalls(calls)).toEqual([])
   })
