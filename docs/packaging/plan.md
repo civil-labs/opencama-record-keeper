@@ -172,6 +172,19 @@ nothing on the workflows (run from its released binary, not installed).
 
 **Before merge:** the owner confirms the App is installed and the two secrets exist.
 
+**As built:**
+
+- The App's credentials are organization-level, not repo secrets as the spec says:
+  `RELEASE_PLEASE_APP_ID` is an organization **variable** and
+  `RELEASE_PLEASE_PRIVATE_KEY` an organization **secret**. `release-please.yml` reads
+  `vars.RELEASE_PLEASE_APP_ID`. This follows the owner's setup; the spec's GitHub setup
+  section is updated to match.
+- "Confirm Actions may create pull requests" isn't needed: release-please opens its
+  PRs with the App's token. `docs/github-setup.md` says it can stay off.
+- `docs/github-setup.md` has civil-os's sections 1 to 3 and 7, plus a short "after the
+  first release" list. It has no secrets table, since this repo has no secrets of its
+  own.
+
 **After merge:** the `release-please` run on `main` passes, and it opens a release PR
 proposing `v0.1.0`. It isn't merged until PR 4 is in.
 
