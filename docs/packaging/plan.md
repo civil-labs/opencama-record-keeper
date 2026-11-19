@@ -147,6 +147,13 @@ nothing on the workflows (run from its released binary, not installed).
 - The owner sets the package public and links it to the repo (the setup checklist in
   PR 3 records this).
 
+**As built:**
+
+- The `main` job tests the pushed image by digest (`$IMAGE@<digest>` from the push
+  step), not by `:sha-<short>`. It's the same image, but nothing can move a digest.
+- The copied scripts' doc references (`docs/image-promotion/…`) still point at
+  civil-os, and the header says so.
+
 ## PR 3: releases (`ci/releases`)
 
 1. **`ci: check PR titles are conventional commits`**: `pr-title.yml`, copied from
