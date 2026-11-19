@@ -144,16 +144,25 @@ in each names the source path, so a later fix can be carried over.
 - It authenticates as the same GitHub App as civil-os, through repo secrets
   `RELEASE_PLEASE_APP_ID` and `RELEASE_PLEASE_PRIVATE_KEY`. A tag pushed with
   `GITHUB_TOKEN` wouldn't trigger `images.yml`.
-- This repo merges PRs with merge commits, and every commit is already conventional, so
-  release-please reads the branch commits. The changelog lists each step, not one line
-  per PR. That's accepted; switching to squash merges is the owner's call, and would
-  need a PR-title check like civil-os's `pr-title.yml`.
+- **PRs are squash-merged** (owner's decision, 2026-11-19), with the PR title as the
+  commit message, as in civil-os. release-please reads one conventional commit per PR,
+  so the changelog has one line per PR.
+  - A new `pr-title.yml` workflow, copied from civil-os, checks that every PR title is a
+    conventional commit (`amannn/action-semantic-pull-request`, pinned by SHA). Its job
+    is `conventional-title`.
+  - Commits inside a branch still follow the conventional format, since the plan's
+    steps are reviewed commit by commit. Only the title reaches `main`.
 
 ## GitHub setup (owner, once)
 
 A checklist in `docs/github-setup.md`, modeled on civil-os's:
 
-- [ ] Install the release-please GitHub App on this repo, and add its two secrets.
+- [x] Merge settings: squash merging only, with the default commit message set to
+      "Pull request title"; merge commits and rebase merging off. (Done 2026-11-19.)
+- [ ] A ruleset for `main` requiring the CI checks and `conventional-title`. The check
+      names are listed once they've run.
+- [ ] Install the release-please GitHub App on this repo, and add its two secrets
+      (`RELEASE_PLEASE_APP_ID`, `RELEASE_PLEASE_PRIVATE_KEY`). The owner is doing this.
 - [ ] After the first `main` push, set the `opencama-record-keeper` package's visibility
       to public and link it to this repo.
 - [ ] Confirm Actions may create pull requests (needed by release-please).
