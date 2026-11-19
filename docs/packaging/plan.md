@@ -100,6 +100,28 @@ PR 1 is useful on its own: once it's merged, `docker build .` produces a working
 - `docker run -p 3000:8080 record-keeper:local` against `mise run up`: sign in, select
   a parcel, open a transfer. The console shows no CSP violations.
 
+**As built:**
+
+- The `.mjs` type follows `include /etc/nginx/mime.types;` in the server block. An
+  nginx `types` block replaces the inherited map instead of adding to it, so the
+  spec's block on its own served `.html`, `.css` and `.js` as
+  `application/octet-stream`. Two `types` blocks at one level add up. This is an
+  implementation detail: the image serves what the spec says.
+- The image test also checks the `Content-Type` of `.js`, `.css` and the HTML
+  responses, so a broken MIME map fails it. The `types` block on its own was one of
+  the deliberately broken builds, and it failed.
+- The image is 62.6 MB.
+- The browser check ran in headless Firefox 151, driven over WebDriver BiDi by
+  `puppeteer-core` (installed outside the repo, with no browser download), against a
+  fresh `mise run up`. Sign-in through Dex, the map (tiles through the `.mjs` worker),
+  parcel 2, transfer 3, party 3, address 2 and a client-side hop all worked. For CSP, a
+  throwaway variant of the image added `report-uri` and a control page. The control
+  produced its three reports (inline script, `<style>` and `style=`), and the app walk
+  produced none.
+- Over BiDi, Firefox does pass CSP violations to automation, as page errors. PR 4's
+  note for section 10 says that, instead of the spec's "Firefox doesn't pass CSP
+  warnings to automation", which held for the MVP run's tooling.
+
 ## PR 2: publish from `main` (`ci/publish-images`)
 
 1. **`ci: copy the image promotion script from civil-os`**: `scripts/promote-image.sh`

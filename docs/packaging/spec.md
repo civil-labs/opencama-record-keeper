@@ -53,7 +53,8 @@ editor and agent directories. The build context then holds only what the build r
   `application/octet-stream`. The base image's `mime.types` has no `.mjs` entry
   (checked in `1.30.6-alpine3.24`). Roll Reviewer patches it for the same reason. Here
   it's a `types { application/javascript mjs; }` block in `nginx.conf`, not an edit to
-  the base image's file.
+  the base image's file. The block follows `include /etc/nginx/mime.types;`, because a
+  `types` block on its own replaces the inherited map.
 - **Compression:** `gzip on` for text, CSS, JavaScript (including `.mjs`), JSON and SVG,
   above 1 kB.
 - **No proxying.** The browser calls the gateway and the IdP directly.

@@ -1,0 +1,11 @@
+# The build reads only the sources and configs; keep everything else out of
+# the context (docs/packaging/spec.md).
+node_modules
+dist
+coverage
+.git
+.github
+docs
+.claude
+.vscode
+.idea
