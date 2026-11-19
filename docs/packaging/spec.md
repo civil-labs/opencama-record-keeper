@@ -4,12 +4,11 @@
 |---|---|
 | **Author / product owner** | Jackson |
 | **Date** | 2026-11-19 |
-| **Status** | Draft, pending the intent being merged. The decisions below are proposals, for the owner to sign off. |
+| **Status** | Accepted in #10. |
 | **Intent** | [`intent.md`](intent.md) |
 
 This spec sets out the image, how it's configured, what CI tests and publishes, and how
-releases work. The order of the work goes in `plan.md`, written after this spec is
-accepted.
+releases work. The order of the work goes in [`plan.md`](plan.md).
 
 ## Decisions on the intent's open questions
 

@@ -4,7 +4,7 @@
 |---|---|
 | **Author / product owner** | Jackson |
 | **Date** | 2026-11-19 |
-| **Status** | Draft. Accepted when merged. |
+| **Status** | Accepted in #10. |
 | **Repo** | `opencama-record-keeper` |
 
 ## Problem
