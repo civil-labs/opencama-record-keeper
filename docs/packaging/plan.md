@@ -184,6 +184,10 @@ nothing on the workflows (run from its released binary, not installed).
 - `docs/github-setup.md` has civil-os's sections 1 to 3 and 7, plus a short "after the
   first release" list. It has no secrets table, since this repo has no secrets of its
   own.
+- A `release-please` 17.11.2 `release-pr --dry-run` against this branch settled the
+  two release-please risks before merge. It would open "release 0.1.0", having read 12
+  commits from `bootstrap-sha` on, and bump `package.json` and `package-lock.json`
+  from `0.0.0`. Its changelog lists only #12's `feat:`; `ci:` and `docs:` are hidden.
 
 **After merge:** the `release-please` run on `main` passes, and it opens a release PR
 proposing `v0.1.0`. It isn't merged until PR 4 is in.
