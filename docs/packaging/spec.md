@@ -190,9 +190,11 @@ A checklist in `docs/github-setup.md`, modeled on civil-os's:
   hand with `gh attestation verify oci://ghcr.io/civil-labs/opencama-record-keeper:sha-<short> --repo civil-labs/opencama-record-keeper`).
 - **Manual, before accepting the feature:** run the published image on port 3000
   against a fresh civil-os `mise run up`, and pass the MVP smoke checklist, section 10
-  included. A person sees CSP violations in the browser console. A scripted run needs a
-  `report-uri` collector and a control page that's known to violate the policy, because
-  Firefox doesn't pass CSP warnings to automation; section 10 gains a note saying so.
+  included. A person sees CSP violations in the browser console. A scripted run in
+  Firefox over WebDriver BiDi sees them as page errors (PR 1 found this; the spec first
+  said Firefox doesn't pass them to automation). The stronger scripted check is a
+  `report-uri` collector with a control page that's known to violate the policy.
+  Section 10 gains a note saying so.
 - **The first release:** check `:vX.Y.Z` and `:sha-<short>` have the same digest, and
   the attestation verifies for the version tag.
 

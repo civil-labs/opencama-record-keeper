@@ -9,6 +9,10 @@ and the header of `database/fixtures/synthetic.sql`).
 
 1. In civil-os, start from a clean stack: `mise run down`, then `mise run up`.
 2. Here, run `npm ci`, then `npm run dev`, and open <http://localhost:3000>.
+   **Or, to check an image** instead of the dev server, run it on port 3000:
+   `docker run --rm -p 3000:8080 ghcr.io/civil-labs/opencama-record-keeper:<tag>`.
+   Its built-in `config.json` points at the local stack. Every section applies, and
+   section 10 is then the image's own policy, not `npm run preview`'s.
 3. Sign in as `dev@example.com` with password `civil-os-dev-password`. This is the
    local Dex's throwaway user, documented in civil-os `dev/dex.yaml`.
 
@@ -125,7 +129,16 @@ These settle the spec's Dex questions, first confirmed in PR 2 (#4).
 ## 10. Production build
 
 - [ ] Run `npm run build`, then `npm run preview`. You need port 3000, so stop
-      `npm run dev` first. Preview serves `dist/` with
-      `Content-Security-Policy: script-src 'self'; style-src 'self'`.
+      `npm run dev` first. Preview serves `dist/` with the image's policy:
+      `script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'self';
+      frame-ancestors 'none'; form-action 'none'`. (Checking an image, skip this
+      step: the image sends the same policy.)
 - [ ] Sign in, select a parcel, and open a transfer. The browser console shows no
       CSP violations, and the map and pages work as in dev.
+
+**Scripted runs.** Headless Firefox driven over WebDriver BiDi (for example by
+`puppeteer-core` with `browser: 'firefox'`) reports CSP violations to the script as
+page errors. A stronger check adds `report-uri` to the policy and collects the reports,
+with a control page that's known to violate it, so a run that collects nothing is
+proven able to collect. Older automation that doesn't use BiDi may not see CSP
+warnings at all.
