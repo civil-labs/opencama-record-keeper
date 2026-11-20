@@ -205,6 +205,23 @@ proposing `v0.1.0`. It isn't merged until PR 4 is in.
 The agent runs the smoke checklist against the published `:sha-<short>` image and a
 fresh `mise run down && mise run up`, and puts the results in the PR description.
 
+**As built:**
+
+- The checklist ran against `:sha-3016bf7`, pulled anonymously, as a 56-check script in
+  headless Firefox over BiDi. It ran on a stack another session was also using, so not
+  on a fresh `mise run up`: its data had drifted from the fixtures (parcel 2's
+  frontage), though no checked value had.
+- Section 7's failed-request check can't show `Unavailable` on the network it ran on.
+  With the reader stopped, Docker's DNS passes `database-reader` to the host resolver,
+  whose search domain has wildcard DNS. The gateway dialed a public IP and timed out
+  (504 `deadline_exceeded` after 30 s), and the page showed `Unknown: NetworkError…`
+  with Retry. Retry loaded the record once the reader was back.
+- Section 9's forced-refresh check (a 2-minute `idTokens` expiry in civil-os
+  `dev/dex.yaml`) wasn't run, since it needs an uncommitted edit to another session's
+  checkout. Session handling is app code, unchanged since the MVP run passed it.
+- The spec's Testing section is corrected: Firefox over BiDi does report CSP violations
+  to automation.
+
 ## Final verification (before reporting the feature done)
 
 - Every success criterion in the intent, each with its evidence:
