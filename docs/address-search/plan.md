@@ -189,6 +189,37 @@
     `clear()` wouldn't know which key to delete.
   - `AppLayout` passing `recentPicks` to `Navbar` moved to step 6, where
     `Navbar` first uses it.
+- Step 5:
+  - The tests use real timers and `waitFor`, not fake timers. Debouncing at
+    250 ms fits well inside `waitFor`'s default timeout, and there was no
+    flakiness in three runs in a row.
+  - Cancellation works: a request that never answers on its own is aborted
+    when the text changes. The router transport also aborts a call's signal
+    once the call finishes, so only the superseded call's signal is checked.
+- Step 6:
+  - Two Downshift defaults differed from the spec, and both are fixed in
+    `stateReducer` and tested:
+    - On blur (Tab, or a click elsewhere), Downshift picks the highlighted
+      option. The spec says Tab only closes the popup.
+    - Downshift handles Enter with no active option by closing the popup.
+      The spec says it does nothing.
+  - Arrow keys wrap, nothing is highlighted on open, and Escape-then-clear
+    are all Downshift defaults, as checked in the plan.
+  - `react-hooks/refs` rejects passing a ref into `getInputProps` during
+    render. The input gets a `useId` through Downshift's `inputId`, and a
+    pick blurs it with `document.getElementById`.
+  - The popup's z-index token is `layers.popup` (`10`), since StyleX
+    variables are grouped by kind in `tokens.stylex.ts`.
+  - `Navbar.test.tsx` now wraps the navbar in a transport and a
+    `QueryClient`, since the navbar renders search.
+  - "Picking the same parcel twice": a pick always records and navigates,
+    but navigating to the URL you're already on doesn't add a history entry.
+    The test goes somewhere else between the two picks.
+  - The bundle grew 45.92 kB (14.07 kB gzipped) for Downshift and the new
+    code: 1,822.55 kB (505.09 kB gzipped), up from 1,776.63 kB (491.02 kB).
+    The legacy `<Downshift>` component appears to be included (its name is
+    in the bundle) despite `"sideEffects": false`. Per the plan, that isn't
+    a blocker.
 
 ## Final verification (before reporting the feature done)
 

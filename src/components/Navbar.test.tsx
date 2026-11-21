@@ -1,3 +1,5 @@
+import { TransportProvider } from '@connectrpc/connect-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import {
   createMemoryHistory,
@@ -9,6 +11,8 @@ import {
 import type { User } from 'oidc-client-ts'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { userDisplayName } from '../auth.ts'
+import { RecentPicks } from '../search/recentPicks.ts'
+import { noCallsTransport } from '../test/appRouter.tsx'
 import { Navbar } from './Navbar.tsx'
 
 afterEach(cleanup)
@@ -46,14 +50,23 @@ function fakeAuth(user: User | null) {
 }
 
 async function renderNavbar(auth: ReturnType<typeof fakeAuth>) {
-  const rootRoute = createRootRoute({ component: () => <Navbar auth={auth} /> })
+  const recentPicks = new RecentPicks(null, auth)
+  const rootRoute = createRootRoute({
+    component: () => <Navbar auth={auth} recentPicks={recentPicks} />,
+  })
   const parcels = createRoute({ getParentRoute: () => rootRoute, path: 'parcels' })
   const router = createRouter({
     routeTree: rootRoute.addChildren([parcels]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
   })
   await act(() => router.load())
-  render(<RouterProvider router={router} />)
+  render(
+    <TransportProvider transport={noCallsTransport().transport}>
+      <QueryClientProvider client={new QueryClient()}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </TransportProvider>,
+  )
   await screen.findByRole('navigation')
 }
 
@@ -71,6 +84,11 @@ describe('Navbar', () => {
     expect(screen.getByText('Dev User')).toBeDefined()
     act(() => auth.setUser(userWith({ name: 'Renamed' })))
     expect(screen.getByText('Renamed')).toBeDefined()
+  })
+
+  test('renders the address search box', async () => {
+    await renderNavbar(fakeAuth(userWith({ name: 'Dev User' })))
+    expect(screen.getByRole('combobox', { name: 'Search addresses' })).toBeDefined()
   })
 
   test('"Sign out" is a button that signs out', async () => {

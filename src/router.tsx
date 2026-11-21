@@ -116,13 +116,13 @@ const appRoute = createRoute({
   loader: ({ context: { queryClient, transport } }) =>
     queryClient.prefetchQuery(neighborhoodDefinitionsQuery(transport)),
   component: function AppLayout() {
-    const { auth } = useRouteContext({ from: '/app' })
+    const { auth, recentPicks } = useRouteContext({ from: '/app' })
     const fullBleed = useMatches({
       select: (matches) => matches.some((match) => match.staticData.fullBleed),
     })
     return (
       <>
-        <Navbar auth={auth} />
+        <Navbar auth={auth} recentPicks={recentPicks} />
         <main {...stylex.props(fullBleed ? styles.fullBleed : styles.page)}>
           <Outlet />
         </main>
