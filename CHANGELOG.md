@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/civil-labs/opencama-record-keeper/compare/v0.1.0...v0.1.1) (2026-11-21)
+
+
+### Features
+
+* search parcels by address from the navbar ([#21](https://github.com/civil-labs/opencama-record-keeper/issues/21)) ([24b903b](https://github.com/civil-labs/opencama-record-keeper/commit/24b903b05380dd24369757b96faebef2e46b1f25))
+
 ## 0.1.0 (2026-11-20)
 
 
