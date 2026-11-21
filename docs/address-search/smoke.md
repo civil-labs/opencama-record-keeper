@@ -35,8 +35,9 @@ The data is described in the header of civil-os
 - [ ] It shows 10 addresses and "More matches. Keep typing to narrow down."
 - [ ] Typing `12 fixture` puts "12 Fixture Way, Testville ZZ000" first.
 - [ ] Typing a typo, `fxture way`, still finds Fixture Way addresses.
-- [ ] Typing `old fixture way` finds nothing ("No parcels match."): address
-      5's old line is historical.
+- [ ] Typing `old fixture way` never lists "5 Old Fixture Way": address 5's
+      old line is historical. Current Fixture Way addresses still match, by
+      similarity.
 - [ ] Typing `20 fixture way` or `21 fixture way` never lists
       "20 Fixture Way" (voided parcel 20) or "21 Fixture Way" (address 21 is
       on no parcel).
@@ -78,14 +79,18 @@ The data is described in the header of civil-os
 - [ ] Application → Local Storage shows them under
       `recordKeeper.recentPicks.<sub>`.
 - [ ] "Sign out", then sign back in: the list is empty and the key is gone.
-- [ ] With site data blocked for `localhost:3000`, search and picking still
-      work, and recent picks last until reload.
+
+Blocked site data can't be checked here: sign-in itself keeps the session in
+`localStorage`, so the app can't be used without it. The store's fallback to
+memory is covered by `recentPicks.test.ts`.
 
 ## 6. Errors
 
 - [ ] With the civil-os gateway stopped (`docker stop` its container),
-      searching shows "Search failed: Unavailable. …" in the popup, and the
-      rest of the page still works. Start it again afterwards.
+      searching shows one "Search failed: …" line in the popup, and the rest
+      of the page still works. A refused connection is reported as
+      `Unknown. NetworkError when attempting to fetch resource.` Start the
+      gateway again afterwards.
 
 ## 7. CSP
 
