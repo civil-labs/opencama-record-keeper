@@ -219,4 +219,57 @@ describe('sign-out', () => {
       state: { returnTo: '/parcels' },
     })
   })
+
+  test('runs sign-out hooks while the user is still signed in, then redirects', async () => {
+    const { um, auth } = setup(valid())
+    await auth.start(new EventTarget() as Window)
+    const order: string[] = []
+    auth.onSignOut(() => order.push(`hook 1, user ${auth.getUser()?.profile.sub}`))
+    auth.onSignOut(() => {
+      order.push('hook 2 throws')
+      throw new Error('broken hook')
+    })
+    auth.onSignOut(() => order.push('hook 3'))
+    um.removeUser.mockImplementation(() => {
+      order.push('removeUser')
+      um.stored = null
+      return Promise.resolve()
+    })
+    um.signinRedirect.mockImplementation(() => {
+      order.push('signinRedirect')
+      return Promise.resolve()
+    })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    void auth.signOut()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(order).toEqual([
+      'hook 1, user u1',
+      'hook 2 throws',
+      'hook 3',
+      'removeUser',
+      'signinRedirect',
+    ])
+    expect(warn).toHaveBeenCalledOnce()
+    warn.mockRestore()
+  })
+
+  test('an unregistered hook does not run', async () => {
+    const { auth } = setup(valid())
+    const hook = vi.fn()
+    const unregister = auth.onSignOut(hook)
+    unregister()
+    void auth.signOut()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(hook).not.toHaveBeenCalled()
+  })
+
+  test('clearAndSignIn (an expired or rejected session) runs no hooks', async () => {
+    const { um, auth } = setup(valid())
+    const hook = vi.fn()
+    auth.onSignOut(hook)
+    void auth.clearAndSignIn('/parcels/x')
+    await new Promise((r) => setTimeout(r, 0))
+    expect(hook).not.toHaveBeenCalled()
+    expect(um.signinRedirect).toHaveBeenCalledWith({ state: { returnTo: '/parcels/x' } })
+  })
 })

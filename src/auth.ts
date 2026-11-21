@@ -132,6 +132,7 @@ export class Auth {
   private renewal: Promise<void> | null = null
   private user: User | null = null
   private readonly listeners = new Set<() => void>()
+  private readonly signOutHooks = new Set<() => void>()
 
   constructor(userManager: UserManagerLike) {
     this.userManager = userManager
@@ -272,7 +273,26 @@ export class Auth {
    * has to sign in again. Other tabs see the user removed and follow.
    */
   signOut(): Promise<never> {
+    // Before the user is removed: hooks may need to know who's signing out.
+    for (const hook of this.signOutHooks) {
+      try {
+        hook()
+      } catch (error) {
+        console.warn('Sign-out hook failed', error)
+      }
+    }
     return this.clearAndSignIn(DEFAULT_RETURN_TO)
+  }
+
+  /**
+   * Runs `hook` on an explicit sign-out, while the user is still signed in,
+   * to clear per-user data such as recent picks. A hook that throws doesn't
+   * stop sign-out. Not run by clearAndSignIn: an expired session keeps the
+   * data, since the same user signs back in. Returns an unregister function.
+   */
+  readonly onSignOut = (hook: () => void): (() => void) => {
+    this.signOutHooks.add(hook)
+    return () => this.signOutHooks.delete(hook)
   }
 
   /** Finishes sign-in on /callback, and returns the path to go back to. */

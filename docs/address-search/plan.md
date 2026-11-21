@@ -178,6 +178,18 @@
 
 **As built:**
 
+- Step 1: no source changes were needed. Before the feature, the checks pass
+  with 22 test files and 180 tests, and the bundle is 1,776.63 kB (491.02 kB
+  gzipped).
+- Step 4:
+  - The sign-out tests are in `auth.session.test.ts`, next to the existing
+    sign-out test that uses its fake `UserManager`, not in `auth.test.ts`.
+  - The hooks run before `removeUser()`, which a test enforces. Removing the
+    user fires `userUnloaded`, which resets the store's `sub`, so a later
+    `clear()` wouldn't know which key to delete.
+  - `AppLayout` passing `recentPicks` to `Navbar` moved to step 6, where
+    `Navbar` first uses it.
+
 ## Final verification (before reporting the feature done)
 
 - `typecheck`, `lint`, `test` and `build` pass on the final commit, and the

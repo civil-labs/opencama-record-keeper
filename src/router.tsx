@@ -37,6 +37,7 @@ import { ParcelPane } from './routes/ParcelPane.tsx'
 import { ParcelsLayout } from './routes/ParcelsLayout.tsx'
 import { PartyPage } from './routes/PartyPage.tsx'
 import { TransferPage } from './routes/TransferPage.tsx'
+import type { RecentPicks } from './search/recentPicks.ts'
 import { spacing } from './theme/tokens.stylex.ts'
 
 export interface RouterContext {
@@ -49,6 +50,8 @@ export interface RouterContext {
   queryClient: QueryClient
   /** The user's chosen neighborhood definition. */
   definitionChoice: DefinitionChoice
+  /** The signed-in user's recent search picks. */
+  recentPicks: RecentPicks
 }
 
 const styles = stylex.create({
