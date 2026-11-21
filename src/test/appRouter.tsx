@@ -10,6 +10,7 @@ import { vi } from 'vitest'
 import type { Auth } from '../auth.ts'
 import { DefinitionChoice } from '../neighborhoodDefinition.ts'
 import { createAppRouter } from '../router.tsx'
+import { RecentPicks } from '../search/recentPicks.ts'
 
 export function signedInAuth(): Auth {
   return {
@@ -17,6 +18,7 @@ export function signedInAuth(): Auth {
     signIn: vi.fn(() => new Promise<never>(() => {})),
     clearAndSignIn: vi.fn(() => new Promise<never>(() => {})),
     signOut: vi.fn(() => new Promise<never>(() => {})),
+    onSignOut: vi.fn(() => () => {}),
     subscribe: () => () => {},
     getUser: () => null,
   } as unknown as Auth
@@ -70,6 +72,7 @@ export async function renderApp(
       transport,
       queryClient,
       definitionChoice: new DefinitionChoice(null),
+      recentPicks: new RecentPicks(null, auth),
     },
     history,
   )

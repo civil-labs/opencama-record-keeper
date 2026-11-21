@@ -2,7 +2,9 @@ import * as stylex from '@stylexjs/stylex'
 import { Link } from '@tanstack/react-router'
 import { useSyncExternalStore } from 'react'
 import { userDisplayName, type Auth } from '../auth.ts'
+import type { RecentPicks } from '../search/recentPicks.ts'
 import { sizes, spacing } from '../theme/tokens.stylex.ts'
+import { AddressSearch } from './AddressSearch.tsx'
 
 const styles = stylex.create({
   nav: {
@@ -18,6 +20,12 @@ const styles = stylex.create({
     display: 'flex',
     alignItems: 'center',
     gap: spacing.medium,
+    minWidth: 0,
+  },
+  // Gives way first when the navbar is narrow.
+  userName: {
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
   // A button that looks like a link: it triggers an action, not a navigation.
   signOut: {
@@ -39,15 +47,18 @@ const styles = stylex.create({
 
 export function Navbar({
   auth,
+  recentPicks,
 }: {
   auth: Pick<Auth, 'subscribe' | 'getUser' | 'signOut'>
+  recentPicks: RecentPicks
 }) {
   const user = useSyncExternalStore(auth.subscribe, auth.getUser)
   return (
     <nav {...stylex.props(styles.nav)}>
       <Link to="/parcels">Record Keeper</Link>
+      <AddressSearch recentPicks={recentPicks} />
       <div {...stylex.props(styles.user)}>
-        {user && <span>{userDisplayName(user)}</span>}
+        {user && <span {...stylex.props(styles.userName)}>{userDisplayName(user)}</span>}
         <button
           type="button"
           onClick={() => void auth.signOut()}

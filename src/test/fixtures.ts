@@ -15,6 +15,7 @@ import {
   createRouterTransport,
   type ConnectRouter,
 } from '@connectrpc/connect'
+import { normalizeQuery } from '../search/query.ts'
 
 export const IDS = {
   landUse: '11000000-0000-4000-8000-000000000001',
@@ -32,7 +33,46 @@ export const IDS = {
   parcelNoGeometry: 'a0000000-0000-4000-8000-000000000021',
   missing: 'a0000000-0000-4000-8000-000000000099',
   transfer: (n: number) => `90000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
+  /** Two parcels that share one address, for search. */
+  sharedA: 'a0000000-0000-4000-8000-000000000031',
+  sharedB: 'a0000000-0000-4000-8000-000000000032',
+  sharedAddress: '20000000-0000-4000-8000-000000000031',
+  /** Parcels 10 to 21 on Fixture Way, for search. */
+  wayParcel: (n: number) => `a0000000-0000-4000-8000-${String(100 + n).padStart(12, '0')}`,
+  wayAddress: (n: number) => `20000000-0000-4000-8000-${String(100 + n).padStart(12, '0')}`,
 } as const
+
+/**
+ * The addresses search can find, best first. `fixture way` matches 13, so a
+ * page of 10 has a next page. `shared court` matches two parcels with the
+ * same address.
+ */
+export const SEARCH_HITS = [
+  {
+    parcelId: IDS.parcel,
+    featureId: 1002n,
+    addressId: IDS.address,
+    formattedAddress: '2 Fixture Way, Testville ZZ000',
+  },
+  ...Array.from({ length: 12 }, (_, i) => ({
+    parcelId: IDS.wayParcel(10 + i),
+    featureId: BigInt(1010 + i),
+    addressId: IDS.wayAddress(10 + i),
+    formattedAddress: `${10 + i} Fixture Way, Testville ZZ000`,
+  })),
+  {
+    parcelId: IDS.sharedA,
+    featureId: 1031n,
+    addressId: IDS.sharedAddress,
+    formattedAddress: '7 Shared Court, Testville ZZ000',
+  },
+  {
+    parcelId: IDS.sharedB,
+    featureId: 1032n,
+    addressId: IDS.sharedAddress,
+    formattedAddress: '7 Shared Court, Testville ZZ000',
+  },
+]
 
 export interface FakeCalls {
   calls: { method: string; input: unknown }[]
@@ -47,6 +87,10 @@ export function fakeCivilOs(
     definitions?: 'fail' | 'none'
     /** The address page's parties section fails. */
     failPartiesByAddress?: boolean
+    /** Delay searches, in milliseconds, or by query text. */
+    searchDelayMs?: number | ((query: string) => number)
+    /** Every search fails with this code. */
+    failSearch?: Code
     /** Make every transfers page after the first fail. */
     failNextTransfersPage?: boolean
     register?: (router: ConnectRouter) => void
@@ -94,6 +138,34 @@ export function fakeCivilOs(
       },
     })
     router.service(ParcelsService, {
+      searchParcelsAddresses: async (req, context) => {
+        record('searchParcelsAddresses', req)
+        const delay =
+          typeof options.searchDelayMs === 'function'
+            ? options.searchDelayMs(req.query)
+            : (options.searchDelayMs ?? 0)
+        if (delay) {
+          await new Promise<void>((resolve, reject) => {
+            const timer = setTimeout(resolve, delay)
+            context.signal.addEventListener('abort', () => {
+              clearTimeout(timer)
+              reject(new ConnectError('aborted', Code.Canceled))
+            })
+          })
+        }
+        if (options.failSearch !== undefined) {
+          throw new ConnectError('search failed', options.failSearch)
+        }
+        const q = normalizeQuery(req.query)
+        const matches = SEARCH_HITS.filter((hit) =>
+          normalizeQuery(hit.formattedAddress).includes(q),
+        )
+        const first = req.first ?? 25
+        return {
+          hits: matches.slice(0, first),
+          pageInfo: { hasNextPage: matches.length > first, endCursor: 'cursor' },
+        }
+      },
       getParcelsWithImprovementSummaryByParcelId: async (req) => {
         record('getParcelsWithImprovementSummaryByParcelId', req)
         if (options.parcelDelayMs) await new Promise((r) => setTimeout(r, options.parcelDelayMs))

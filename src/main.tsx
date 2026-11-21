@@ -12,6 +12,7 @@ import { ErrorAlert } from './components/ErrorAlert.tsx'
 import { loadConfig } from './config.ts'
 import { DefinitionChoice } from './neighborhoodDefinition.ts'
 import { createAppRouter } from './router.tsx'
+import { connectRecentPicks } from './search/recentPicks.ts'
 
 // Dev builds only: import.meta.env.DEV is false in production, so the import
 // and the devtools packages are dropped from the bundle. If the import fails,
@@ -43,6 +44,7 @@ async function start() {
   const queryClient = createQueryClient(auth)
   const definitionChoice = DefinitionChoice.fromWindow()
   definitionChoice.start(window)
+  const recentPicks = connectRecentPicks(auth)
   const router = createAppRouter({
     config,
     instance,
@@ -50,6 +52,7 @@ async function start() {
     transport,
     queryClient,
     definitionChoice,
+    recentPicks,
   })
   render(
     <TransportProvider transport={transport}>
