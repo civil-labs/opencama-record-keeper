@@ -16,10 +16,11 @@ function renderSearch(transport: Transport, initial = '') {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     </TransportProvider>
   )
-  return renderHook(({ raw }) => useAddressSearch(raw), {
+  const view = renderHook(({ raw }) => useAddressSearch(raw), {
     wrapper,
     initialProps: { raw: initial },
   })
+  return { ...view, queryClient }
 }
 
 function searches(log: { method: string; input: unknown }[]) {
@@ -100,14 +101,46 @@ describe('useAddressSearch', () => {
   })
 
   test('a slow response for older text never replaces a newer one', async () => {
-    const civil = fakeCivilOs({ searchDelayMs: (q) => (q === 'fixture' ? 600 : 0) })
-    const { result, rerender } = renderSearch(civil.transport, 'fixture')
-    await waitFor(() => expect(searches(civil.calls)).toHaveLength(1))
+    // The server answers the old text last, and this transport ignores
+    // cancellation, so the late answer really is delivered. Whichever layer
+    // stops it (TanStack dropping a cancelled result, or the per-text cache
+    // key), it must never reach the screen.
+    let answered = 0
+    const transport = createRouterTransport(({ service }) => {
+      service(ParcelsService, {
+        searchParcelsAddresses: async (req) => {
+          const old = req.query === 'fixture'
+          await new Promise((r) => setTimeout(r, old ? 600 : 0))
+          answered++
+          return {
+            hits: [{ parcelId: old ? IDS.parcel : IDS.sharedA, addressId: IDS.address, formattedAddress: req.query }],
+            pageInfo: { hasNextPage: false },
+          }
+        },
+      })
+    })
+    const ignoringAborts: Transport = {
+      unary: (method, _signal, ...rest) => transport.unary(method, undefined, ...rest),
+      stream: (method, _signal, ...rest) => transport.stream(method, undefined, ...rest),
+    }
+    const { result, rerender, queryClient } = renderSearch(ignoringAborts, 'fixture')
+    await waitFor(() => expect(result.current.status).toBe('searching'))
+    await new Promise((r) => setTimeout(r, 300))
     rerender({ raw: 'shared court' })
     await waitFor(() => expect(result.current).toMatchObject({ status: 'results', stale: false }))
     expect(results(result.current).hits[0]?.parcelId).toBe(IDS.sharedA)
 
-    await new Promise((r) => setTimeout(r, 700))
+    // The old answer arrives after the new one.
+    await waitFor(() => expect(answered).toBe(2), { timeout: 2000 })
+    await new Promise((r) => setTimeout(r, 50))
+    // The transport delivered the old answer, and TanStack Query dropped it:
+    // a cancelled query rolls back instead of storing a late result.
+    const old = queryClient
+      .getQueryCache()
+      .findAll()
+      .find((q) => JSON.stringify(q.queryKey).includes('"query":"fixture"'))
+    expect(old?.state.data).toBeUndefined()
+    expect(results(result.current)).toMatchObject({ stale: false })
     expect(results(result.current).hits[0]?.parcelId).toBe(IDS.sharedA)
   })
 
