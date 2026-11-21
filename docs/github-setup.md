@@ -18,9 +18,9 @@ In **Settings → Rules → Rulesets**, a ruleset for `main`:
 - [x] Require these status checks to pass (added 2026-11-19):
   - `check`: typecheck, lint, unit tests, build, and the promotion script's test;
   - `image`: builds the image and runs `scripts/image-test.sh` against it.
-- [ ] Add **`conventional-title`** once this checklist's PR has merged. It runs from
-  `main`'s copy of `pr-title.yml` (`pull_request_target`), so it can't report on the PR
-  that adds it.
+- [x] Require **`conventional-title`** too (added 2026-11-20, after #14 merged). It runs
+  from `main`'s copy of `pr-title.yml` (`pull_request_target`), so it couldn't report
+  on the PR that added it.
 
 ## 2. release-please App and its credentials
 
@@ -57,11 +57,13 @@ The first `main` run of `images.yml` created
 
 ## 4. After the first release
 
-- [ ] The first release PR proposes `v0.1.0`, with a changelog of the packaging PRs.
-- [ ] Merging it tags `v0.1.0`. The tag's `promote` job adds `:v0.1.0` to the `main`
+- [x] The first release PR proposes `v0.1.0`, with a changelog of the packaging PRs.
+  (#15, merged 2026-11-20.)
+- [x] Merging it tags `v0.1.0`. The tag's `promote` job adds `:v0.1.0` to the `main`
   image for that commit. Check both tags have the same digest, and that
   `gh attestation verify oci://ghcr.io/civil-labs/opencama-record-keeper:v0.1.0 --repo civil-labs/opencama-record-keeper`
-  passes.
+  passes. (Checked 2026-11-20: both tags are `sha256:81b56e5b…`, and the attestation
+  verifies.)
 
 ## 5. Release image missing
 

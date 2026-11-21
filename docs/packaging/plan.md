@@ -233,6 +233,13 @@ fresh `mise run down && mise run up`, and puts the results in the PR description
   `:v0.1.0` and `:sha-<short>` resolve to the same digest, and
   `gh attestation verify` passes for `:v0.1.0`.
 
+**As built (2026-11-20):** all done. #15 tagged `v0.1.0` on `4e556ba`. The `main`
+build pushed `:sha-4e556ba` and its image test passed. The tag's `promote` job
+passed. Pulled anonymously, `:v0.1.0` and `:sha-4e556ba` are both
+`sha256:81b56e5b6e795199b325d2fd7b762b7dce4c6569881742afc552f3efe89b0154`.
+`gh attestation verify` passes for `:v0.1.0`, with SLSA v1 provenance signed by
+`images.yml` on `main`.
+
 ## Risks
 
 | Risk | Mitigation |
