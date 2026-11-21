@@ -161,3 +161,18 @@ function samePicks(a: readonly RecentPick[], b: readonly RecentPick[]) {
     )
   )
 }
+
+/**
+ * The app's store: backed by localStorage, following other tabs, and
+ * cleared when the user explicitly signs out (spec: Clearing on sign-out).
+ * Called once at startup, after auth has loaded the user.
+ */
+export function connectRecentPicks(
+  auth: UserSource & Pick<Auth, 'onSignOut'>,
+  win: Window = window,
+): RecentPicks {
+  const picks = RecentPicks.fromWindow(auth, win)
+  picks.start(win)
+  auth.onSignOut(() => picks.clear())
+  return picks
+}
