@@ -118,6 +118,7 @@ export function statusMessage(state: AddressSearchState): string {
  * - Enter with no active option does nothing, instead of closing;
  * - a click on the input opens the popup, instead of toggling it;
  * - blur (Tab, or a click elsewhere) never picks the highlighted option.
+ * The highlight itself is reset when the list changes; see AddressSearch.
  */
 function stateReducer(
   state: UseComboboxState<Item>,
@@ -125,8 +126,8 @@ function stateReducer(
 ): Partial<UseComboboxState<Item>> {
   switch (type) {
     case useCombobox.stateChangeTypes.InputKeyDownEnter:
-      // Enter with no active option does nothing.
-      if (state.highlightedIndex < 0) return state
+      // Enter with no active option, or one no longer in the list, does nothing.
+      if (state.highlightedIndex < 0 || changes.selectedItem == null) return state
       return { ...changes, inputValue: '', isOpen: false, highlightedIndex: -1 }
     case useCombobox.stateChangeTypes.ItemClick:
       return { ...changes, inputValue: '', isOpen: false, highlightedIndex: -1 }
@@ -154,6 +155,13 @@ export function AddressSearch({ recentPicks }: { recentPicks: RecentPicks }) {
   const search = useAddressSearch(raw)
   const items = itemsFor(search, recent)
   const showRecent = search.status === 'empty'
+  // Downshift keeps the highlighted index when the items change, so a
+  // highlight moved on earlier hits would land on a different parcel, or on
+  // none, when new hits arrive. The highlight belongs to the list it was set
+  // on: a different list (other parcels, or another order) starts with none.
+  const listKey = items.map((item) => item.parcelId).join(',')
+  const [highlight, setHighlight] = useState({ listKey: '', index: -1 })
+  const controlledHighlight = highlight.listKey === listKey ? highlight.index : -1
 
   const { isOpen, highlightedIndex, getInputProps, getMenuProps, getItemProps, getLabelProps, openMenu } =
     useCombobox<Item>({
@@ -165,6 +173,9 @@ export function AddressSearch({ recentPicks }: { recentPicks: RecentPicks }) {
       selectedItem: null,
       itemToString: (item) => item?.formattedAddress ?? '',
       itemToKey: (item) => item?.parcelId,
+      highlightedIndex: controlledHighlight,
+      onHighlightedIndexChange: ({ highlightedIndex: index }) =>
+        setHighlight({ listKey, index: index ?? -1 }),
       stateReducer,
       onInputValueChange: ({ inputValue }) => setRaw(inputValue),
       onSelectedItemChange: ({ selectedItem }) => {

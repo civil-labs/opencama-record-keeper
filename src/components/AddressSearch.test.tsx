@@ -243,6 +243,38 @@ describe('keyboard', () => {
     expect(recentPicks.get()).toEqual([])
   })
 
+  test('a highlight on earlier hits is dropped when a shorter list arrives', async () => {
+    const civil = fakeCivilOs({ searchDelayMs: (q) => (q === 'shared court' ? 400 : 0) })
+    const { input, history } = await renderSearch({ transport: civil.transport })
+    await typeAndWait(input, 'fixture way')
+    type(input, 'shared court')
+    for (let i = 0; i < 8; i++) key(input, 'ArrowDown')
+    expect(input.getAttribute('aria-activedescendant')).toBeTruthy()
+
+    await waitFor(() => expect(optionTexts()).toHaveLength(2))
+    expect(input.getAttribute('aria-activedescendant')).toBeFalsy()
+    // Enter now does nothing: no pick, the text stays.
+    key(input, 'Enter')
+    expect(history.location.pathname).toBe('/parcels')
+    expect(input.value).toBe('shared court')
+    expect(optionTexts()).toHaveLength(2)
+  })
+
+  test('a highlight on earlier hits is dropped when a same-length list arrives', async () => {
+    const civil = fakeCivilOs({ searchDelayMs: (q) => (q === '1 fixture way' ? 400 : 0) })
+    const { input, history } = await renderSearch({ transport: civil.transport })
+    await typeAndWait(input, 'shared court')
+    type(input, '1 fixture way')
+    key(input, 'ArrowDown')
+    // 11 and 21 Fixture Way: as many hits as before, different parcels.
+    await waitFor(() => expect(optionTexts()[0]).toBe('11 Fixture Way, Testville ZZ000'))
+    expect(optionTexts()).toHaveLength(2)
+    expect(input.getAttribute('aria-activedescendant')).toBeFalsy()
+    // Enter mustn't pick a parcel that was never shown highlighted.
+    key(input, 'Enter')
+    expect(history.location.pathname).toBe('/parcels')
+  })
+
   test('↓ on a closed popup opens it', async () => {
     const { input } = await renderSearch()
     await typeAndWait(input, 'shared court')
