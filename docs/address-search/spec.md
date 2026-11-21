@@ -123,8 +123,9 @@ with a listbox popup:
 | Escape | Closes the popup. Pressed again with it closed, clears the input. |
 | Tab | Closes the popup and moves focus on as usual. |
 
-- A mouse click on an option picks it. `mousedown` calls `preventDefault`, so
-  the input keeps focus until the pick.
+- A mouse click or tap on an option picks it. The blur that comes before the
+  click doesn't close the popup or drop the pick, and the input keeps focus
+  until the pick. How that's done is left to the implementation.
 - Clicking outside or blurring the input closes the popup.
 - **After a pick:** the input is cleared, the popup closes, the input loses
   focus, and the app navigates to the parcel.
