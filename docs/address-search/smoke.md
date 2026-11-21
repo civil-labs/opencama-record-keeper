@@ -70,8 +70,9 @@ The data is described in the header of civil-os
 
 ## 5. Recent picks
 
-- [ ] After picking two parcels, focusing the empty box shows "Recent" and
-      both, newest first. Picking one goes to it with no
+- [ ] After picking two parcels, clicking into the empty box shows "Recent"
+      and both, newest first. Click elsewhere, then click back in: the list
+      opens and stays open, with no flash. Picking one goes to it with no
       `SearchParcelsAddresses` request.
 - [ ] Picking a sixth parcel drops the oldest. Picking a listed one again
       moves it to the top.

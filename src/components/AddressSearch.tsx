@@ -116,6 +116,7 @@ export function statusMessage(state: AddressSearchState): string {
  * Where Downshift's defaults differ from the spec:
  * - a pick clears the input and closes, instead of filling in the address;
  * - Enter with no active option does nothing, instead of closing;
+ * - a click on the input opens the popup, instead of toggling it;
  * - blur (Tab, or a click elsewhere) never picks the highlighted option.
  */
 function stateReducer(
@@ -129,6 +130,10 @@ function stateReducer(
       return { ...changes, inputValue: '', isOpen: false, highlightedIndex: -1 }
     case useCombobox.stateChangeTypes.ItemClick:
       return { ...changes, inputValue: '', isOpen: false, highlightedIndex: -1 }
+    case useCombobox.stateChangeTypes.InputClick:
+      // Downshift toggles here. A click on an unfocused box fires focus
+      // (which opens) then click, so toggling would close it again at once.
+      return { ...changes, isOpen: true, highlightedIndex: state.isOpen ? state.highlightedIndex : -1 }
     case useCombobox.stateChangeTypes.InputBlur:
       return {
         ...changes,

@@ -203,6 +203,12 @@
       option. The spec says Tab only closes the popup.
     - Downshift handles Enter with no active option by closing the popup.
       The spec says it does nothing.
+    - Downshift toggles the popup when the input is clicked. A click on the
+      unfocused box fires focus (which opens it) and then click (which
+      closed it again), so the recent picks flashed and vanished. Found by
+      the owner after the smoke run, which had only focused the box from
+      script. A click now always opens the popup, and both the tests and
+      the smoke script click into the box.
   - Arrow keys wrap, nothing is highlighted on open, and Escape-then-clear
     are all Downshift defaults, as checked in the plan.
   - `react-hooks/refs` rejects passing a ref into `getInputProps` during

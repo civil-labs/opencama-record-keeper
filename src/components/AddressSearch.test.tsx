@@ -308,6 +308,31 @@ describe('recent picks', () => {
     expect(recentPicks.get()[0]?.parcelId).toBe(IDS.parcel)
   })
 
+  test('clicking into the unfocused box opens them and they stay', async () => {
+    const storage = memoryStorage({
+      [KEY]: JSON.stringify([{ parcelId: IDS.parcel, formattedAddress: '2 Fixture Way' }]),
+    })
+    const { input } = await renderSearch({ storage })
+    // The browser's order for a click on an unfocused input: focus, then click.
+    act(() => input.focus())
+    fireEvent.click(input)
+    expect(input.getAttribute('aria-expanded')).toBe('true')
+    expect(optionTexts()).toEqual(['2 Fixture Way'])
+    // Clicking the focused box again keeps it open.
+    fireEvent.click(input)
+    expect(optionTexts()).toEqual(['2 Fixture Way'])
+  })
+
+  test('clicking into the box with text in it reopens the hits', async () => {
+    const { input } = await renderSearch()
+    await typeAndWait(input, 'shared court')
+    act(() => input.blur())
+    expect(optionTexts()).toEqual([])
+    act(() => input.focus())
+    fireEvent.click(input)
+    expect(optionTexts()).toHaveLength(2)
+  })
+
   test('typing replaces them with the hint or hits', async () => {
     const storage = memoryStorage({
       [KEY]: JSON.stringify([{ parcelId: IDS.parcel, formattedAddress: '2 Fixture Way' }]),
