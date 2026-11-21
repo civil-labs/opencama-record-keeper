@@ -16,7 +16,9 @@ const styles = stylex.create({
   root: {
     position: 'relative',
     flexGrow: 1,
-    flexShrink: 1,
+    // Takes nearly all the shrinking, so the user's name only truncates once
+    // the box is down to its minimum width.
+    flexShrink: 1000,
     flexBasis: '32rem',
     minWidth: '12rem',
     maxWidth: '32rem',
