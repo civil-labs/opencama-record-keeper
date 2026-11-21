@@ -12,7 +12,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { User } from 'oidc-client-ts'
 import { afterEach, describe, expect, test } from 'vitest'
 import { RecentPicks, STORAGE_KEY_PREFIX, type PicksStorage } from '../search/recentPicks.ts'
@@ -338,6 +338,38 @@ describe('recent picks', () => {
     await waitFor(() => expect(history.location.pathname).toBe(`/parcels/${IDS.parcel}`))
     expect(searchCalls(calls)).toEqual([])
     expect(recentPicks.get()[0]?.parcelId).toBe(IDS.parcel)
+  })
+
+  test('they form a group named "Recent" inside the listbox', async () => {
+    const storage = memoryStorage({
+      [KEY]: JSON.stringify([
+        { parcelId: IDS.sharedB, formattedAddress: '7 Shared Court, Testville ZZ000' },
+        { parcelId: IDS.parcel, formattedAddress: '2 Fixture Way, Testville ZZ000' },
+      ]),
+    })
+    const { input } = await renderSearch({ storage })
+    act(() => input.focus())
+    const listbox = screen.getByRole('listbox')
+    const group = within(listbox).getByRole('group', { name: 'Recent' })
+    expect(within(group).getAllByRole('option')).toHaveLength(2)
+    // A listbox owns only options and groups: no bare text of its own.
+    const strayText = [...listbox.querySelectorAll('*')].filter(
+      (el) =>
+        !el.closest('[role="group"]') &&
+        [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim()),
+    )
+    expect(strayText).toEqual([])
+  })
+
+  test('pressing on the "Recent" label keeps focus in the box', async () => {
+    const storage = memoryStorage({
+      [KEY]: JSON.stringify([{ parcelId: IDS.parcel, formattedAddress: '2 Fixture Way' }]),
+    })
+    const { input } = await renderSearch({ storage })
+    act(() => input.focus())
+    // fireEvent returns false when the handler called preventDefault, which
+    // is what stops the browser moving focus off the input.
+    expect(fireEvent.mouseDown(screen.getByText('Recent'))).toBe(false)
   })
 
   test('clicking into the unfocused box opens them and they stay', async () => {

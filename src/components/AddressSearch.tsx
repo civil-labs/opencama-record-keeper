@@ -150,6 +150,7 @@ export function AddressSearch({ recentPicks }: { recentPicks: RecentPicks }) {
   const navigate = useNavigate()
   // Downshift owns the input's ref; the pick finds the input by ID to blur it.
   const inputId = useId()
+  const recentLabelId = useId()
   const [raw, setRaw] = useState('')
   const recent = useSyncExternalStore(recentPicks.subscribe, recentPicks.get)
   const search = useAddressSearch(raw)
@@ -187,6 +188,15 @@ export function AddressSearch({ recentPicks }: { recentPicks: RecentPicks }) {
     })
 
   const open = isOpen && hasContent(search, recent)
+  const options = items.map((item, index) => (
+    <li
+      key={item.parcelId}
+      {...getItemProps({ item, index })}
+      {...stylex.props(styles.option, highlightedIndex === index && styles.active)}
+    >
+      {item.formattedAddress}
+    </li>
+  ))
   const stale = search.status === 'results' && search.stale
 
   return (
@@ -208,20 +218,27 @@ export function AddressSearch({ recentPicks }: { recentPicks: RecentPicks }) {
       />
       <div {...stylex.props(styles.popup, !open && styles.hidden)}>
         <ul {...getMenuProps()} {...stylex.props(styles.list, stale && styles.stale)}>
-          {open && showRecent && items.length > 0 && (
-            <li role="presentation" {...stylex.props(styles.heading)}>
-              Recent
-            </li>
-          )}
           {open &&
-            items.map((item, index) => (
-              <li
-                key={item.parcelId}
-                {...getItemProps({ item, index })}
-                {...stylex.props(styles.option, highlightedIndex === index && styles.active)}
-              >
-                {item.formattedAddress}
+            (showRecent ? (
+              // A listbox owns only options and groups (ARIA), so recent
+              // picks are a group labelled by its heading, as in the APG's
+              // grouped listbox.
+              <li role="none">
+                <ul role="group" aria-labelledby={recentLabelId} {...stylex.props(styles.list)}>
+                  <li
+                    role="presentation"
+                    id={recentLabelId}
+                    // Keeps focus in the input, as the options do.
+                    onMouseDown={(event) => event.preventDefault()}
+                    {...stylex.props(styles.heading)}
+                  >
+                    Recent
+                  </li>
+                  {options}
+                </ul>
               </li>
+            ) : (
+              options
             ))}
         </ul>
         {open && <PopupLines search={search} />}
