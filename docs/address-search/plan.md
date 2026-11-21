@@ -197,8 +197,8 @@
     when the text changes. The router transport also aborts a call's signal
     once the call finishes, so only the superseded call's signal is checked.
 - Step 6:
-  - Two Downshift defaults differed from the spec, and both are fixed in
-    `stateReducer` and tested:
+  - Four Downshift defaults differed from the spec. Each is fixed and
+    tested:
     - On blur (Tab, or a click elsewhere), Downshift picks the highlighted
       option. The spec says Tab only closes the popup.
     - Downshift handles Enter with no active option by closing the popup.
@@ -209,11 +209,38 @@
       the owner after the smoke run, which had only focused the box from
       script. A click now always opens the popup, and both the tests and
       the smoke script click into the box.
+    - Downshift keeps the highlighted index when its items change. Found in
+      the final review. Moving the highlight on the dimmed earlier hits,
+      then getting a shorter list, left `aria-activedescendant` on an
+      option that no longer existed, and Enter cleared the query without
+      navigating. A list of the same length made Enter pick a parcel the
+      user never saw highlighted. `highlightedIndex` is now controlled and
+      tied to the list it was set on (the hits' parcel IDs, in order), and
+      Enter checks the item exists.
+  - Picks are handled in `onSelectedItemChange`, not `onStateChange` as the
+    decision table says. The behaviour is the same: `selectedItem` is
+    controlled and always `null`, so every pick fires it.
   - Arrow keys wrap, nothing is highlighted on open, and Escape-then-clear
     are all Downshift defaults, as checked in the plan.
   - `react-hooks/refs` rejects passing a ref into `getInputProps` during
     render. The input gets a `useId` through Downshift's `inputId`, and a
     pick blurs it with `document.getElementById`.
+  - The "Recent" heading isn't an `<li role="presentation">` directly in
+    the listbox, as the decision table says. A listbox may own only options
+    and groups, so the final review flagged the bare text. Recent picks are
+    a `role="group"` labelled by the heading, as in the APG's grouped
+    listbox. A mousedown on the heading is prevented, so it can't take
+    focus from the input.
+  - `isSearchable` counts the raw limit in characters (code points), not
+    UTF-16 units (`raw.length`) as the spec's comment says. The server's
+    `max_len` counts characters. The input's `maxLength` counts UTF-16
+    units and stops typing before either limit matters, so this only
+    affects text set from script.
+  - The sign-out clearing is wired by `connectRecentPicks` in
+    `search/recentPicks.ts`, which `main.tsx` calls. It's tested end to
+    end with a real `Auth` and `localStorage`, instead of through
+    `Navbar.test.tsx` as the spec's testing list says: `Navbar` only calls
+    `auth.signOut`.
   - The popup's z-index token is `layers.popup` (`10`), since StyleX
     variables are grouped by kind in `tokens.stylex.ts`.
   - `Navbar.test.tsx` now wraps the navbar in a transport and a
@@ -234,6 +261,22 @@
 - The smoke checklist has been run end to end, with the results in the PR.
 - An agent with fresh context walks every section of `spec.md` against the
   diff, and reports any requirement with no code or no test.
+
+**As built (2026-11-21):**
+
+- The review found one bug (the stale highlight), one accessibility error
+  (bare text in the listbox) and a related focus problem on the heading,
+  two weak spots in the tests (an ordering test that couldn't fail, and an
+  untested sign-out wiring line), one unrecorded departure (`isSearchable`
+  counting characters), and two slips in this file. All are fixed or
+  recorded above.
+- One finding is accepted: after an error, an edit undone within 250 ms
+  doesn't retry, because the debounced text never changes. Any edit that
+  settles on different text retries, which is what the spec means by
+  "typing again".
+- Smoke checklist: sections 1–7 were scripted in headless Firefox 160
+  against the local stack, all passing, including a CSP run under
+  `npm run preview`. Section 8 (a screen reader, run by the owner) passed.
 
 ## Risks
 
