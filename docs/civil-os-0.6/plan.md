@@ -84,6 +84,10 @@
    - Checks pass with no test changes. This step is safe on its own.
    - **As built:** the 0.4.1 reading is one temporary helper, `edgeNodes(page)`
      in `PagedList.tsx`, which every row function called. Step 2 deleted it.
+     `TransfersPage` is `GetTransfersByParcelIdResponse |
+     GetTransfersByPartyIdResponse`, not `{ transfers } & Page` as the
+     decisions table says. It's tied to the SDK's own types, so it followed
+     the bump with no edit.
      Checks: 28 test files and 254 tests pass. The bundle is 1,823.22 kB
      (505.24 kB gzipped).
 2. **`feat!: public API 0.5`**
@@ -126,6 +130,23 @@
      data has none, say so in the PR description), and the lookup page's
      neighborhoods.
    - Results go in the PR description.
+   - **As built (2026-11-22):** the stack was built from a civil-os worktree
+     at `v0.6.0`. Before the run, curl showed the gateway answering
+     `NeighborhoodsService` and returning 404 for `NeighborhoodService`.
+     The synthetic data's longest paged list has 3 rows. So the MVP script's
+     fetch wrapper rewrote paged requests to `first: 1`. That way "More" ran
+     real multi-page loads through the gateway: party 3's parcels (3 pages)
+     and transfers (2), and parcel 5's transfers (2). Each "More" sent the
+     previous page's `endCursor` as `after`. Results:
+     - MVP: 26 of 26 pass. That covers sections 1–4, 7 and 8, the lookup
+       pages, no 404 or `Unimplemented` answers, and no console errors.
+       Sections 5, 6 and 9 (history, links, session) weren't rerun: no call
+       they make changed.
+     - Address search: 45 of 45 pass, scripted for sections 1–6.
+     - CSP under `npm run preview`: no violations on search or on the parcel,
+       address, party, neighborhood and transfer pages. A control page
+       showed the script does catch a violation.
+     - No checklist needed fixing.
 
 ## PR 3: prod (gitops)
 
@@ -146,6 +167,10 @@ After PR 2 merges and release-please's PR cuts **v0.2.0**:
 - An agent with fresh context walks every section of `spec.md` against the
   diff, and reports any requirement with no code or no test, and any test
   whose expected output changed.
+
+**As built (2026-11-22):** the review found no gaps, no changed test
+expectations and no bugs. It found one unrecorded departure, the
+`TransfersPage` type, now recorded under step 1.
 
 ## Risks
 
