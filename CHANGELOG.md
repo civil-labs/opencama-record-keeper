@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/civil-labs/opencama-record-keeper/compare/v0.1.1...v0.2.0) (2026-11-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* run against civil-os 0.6 and public API 0.5 ([#25](https://github.com/civil-labs/opencama-record-keeper/issues/25))
+
+### Features
+
+* run against civil-os 0.6 and public API 0.5 ([#25](https://github.com/civil-labs/opencama-record-keeper/issues/25)) ([64c190a](https://github.com/civil-labs/opencama-record-keeper/commit/64c190a0e4e1109d742c470afc13c03ab25e78a0))
+
 ## [0.1.1](https://github.com/civil-labs/opencama-record-keeper/compare/v0.1.0...v0.1.1) (2026-11-21)
 
 
