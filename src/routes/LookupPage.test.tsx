@@ -1,6 +1,6 @@
 import {
   LandUsesService,
-  NeighborhoodService,
+  NeighborhoodsService,
   ZoningService,
 } from '@civil-labs/civil-os-api'
 import { createRouterTransport } from '@connectrpc/connect'
@@ -41,7 +41,7 @@ function fakeTransport(calls: string[]) {
         zoning: { [ZONING]: { id: ZONING, name: 'Low density', code: 'R1', maxFar: 0.5 } },
       }),
     })
-    service(NeighborhoodService, {
+    service(NeighborhoodsService, {
       getNeighborhoods: () => ({
         neighborhoods: {
           [HOOD]: { id: HOOD, name: 'Harbor', neighborhoodDefinitionIds: [DEF_A, DEF_B] },

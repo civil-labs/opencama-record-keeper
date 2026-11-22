@@ -22,11 +22,6 @@ export interface Page {
   pageInfo?: { hasNextPage: boolean; endCursor?: string }
 }
 
-/** A page's rows, from public API 0.4's edges. */
-export function edgeNodes<T>(page: { edges: { node?: T }[] }): T[] {
-  return page.edges.flatMap((edge) => (edge.node ? [edge.node] : []))
-}
-
 /** The next page's cursor, or undefined when there's no next page. */
 export function nextCursor(page: Page): string | undefined {
   return page.pageInfo?.hasNextPage ? page.pageInfo.endCursor : undefined

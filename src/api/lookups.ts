@@ -3,7 +3,7 @@
 // session and shared with link labels.
 import {
   LandUsesService,
-  NeighborhoodService,
+  NeighborhoodsService,
   ZoningService,
 } from '@civil-labs/civil-os-api'
 import type { Transport } from '@connectrpc/connect'
@@ -21,13 +21,13 @@ export const zoningQuery = (transport: Transport) => ({
 })
 
 export const neighborhoodsQuery = (transport: Transport) => ({
-  ...createQueryOptions(NeighborhoodService.method.getNeighborhoods, {}, { transport }),
+  ...createQueryOptions(NeighborhoodsService.method.getNeighborhoods, {}, { transport }),
   ...lookupQueryOptions,
 })
 
 export const neighborhoodDefinitionsQuery = (transport: Transport) => ({
   ...createQueryOptions(
-    NeighborhoodService.method.getNeighborhoodDefinitions,
+    NeighborhoodsService.method.getNeighborhoodDefinitions,
     {},
     { transport },
   ),

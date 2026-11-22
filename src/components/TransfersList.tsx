@@ -10,7 +10,7 @@ import { useInfiniteQuery } from '@connectrpc/connect-query'
 import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query'
 import { RecordLink } from '../links.tsx'
 import { formatTimestamp } from './Fields.tsx'
-import { edgeNodes, FIRST_PAGE, PAGE_SIZE, PagedList, pagedOptions } from './PagedList.tsx'
+import { FIRST_PAGE, PAGE_SIZE, PagedList, pagedOptions } from './PagedList.tsx'
 
 /** A parcel's transfers, a page at a time. Loaded pages stay cached. */
 export function useTransfersByParcel(parcelId: string) {
@@ -34,7 +34,7 @@ export function useTransfersByParty(partyId: string) {
 export type TransfersPage = GetTransfersByParcelIdResponse | GetTransfersByPartyIdResponse
 
 /** The rows on one page of transfers. */
-export const transfersRows = (page: TransfersPage) => edgeNodes(page)
+export const transfersRows = (page: TransfersPage) => page.transfers
 
 /** Time, amount and a link to each transfer, with "More" while there's a next page. */
 export function TransfersList({

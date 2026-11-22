@@ -1,13 +1,16 @@
 // Query options for addresses (spec: Address).
 import {
   AddressesService,
+  ImprovementsService,
+  ParcelsService,
+  PartiesService,
   type GetImprovementsByAddressIdResponse,
   type GetParcelsByAddressIdResponse,
   type GetPartiesByAddressIdResponse,
 } from '@civil-labs/civil-os-api'
 import type { Transport } from '@connectrpc/connect'
 import { createQueryOptions, useInfiniteQuery } from '@connectrpc/connect-query'
-import { edgeNodes, FIRST_PAGE, PAGE_SIZE, pagedOptions } from '../components/PagedList.tsx'
+import { FIRST_PAGE, PAGE_SIZE, pagedOptions } from '../components/PagedList.tsx'
 
 /** One address, from the `addresses` map keyed by ID. */
 export const addressQuery = (transport: Transport, addressId: string) =>
@@ -20,33 +23,33 @@ export const addressQuery = (transport: Transport, addressId: string) =>
 /** The parcels at an address, a page at a time. */
 export const useParcelsByAddress = (addressId: string) =>
   useInfiniteQuery(
-    AddressesService.method.getParcelsByAddressId,
+    ParcelsService.method.getParcelsByAddressId,
     { addressId, first: PAGE_SIZE, after: FIRST_PAGE },
     pagedOptions,
   )
 
 /** The rows on one page of `useParcelsByAddress`. */
-export const parcelsByAddressRows = (page: GetParcelsByAddressIdResponse) => edgeNodes(page)
+export const parcelsByAddressRows = (page: GetParcelsByAddressIdResponse) => page.parcels
 
 /** The improvements at an address, a page at a time. */
 export const useImprovementsByAddress = (addressId: string) =>
   useInfiniteQuery(
-    AddressesService.method.getImprovementsByAddressId,
+    ImprovementsService.method.getImprovementsByAddressId,
     { addressId, first: PAGE_SIZE, after: FIRST_PAGE },
     pagedOptions,
   )
 
 /** The rows on one page of `useImprovementsByAddress`. */
 export const improvementsByAddressRows = (page: GetImprovementsByAddressIdResponse) =>
-  edgeNodes(page)
+  page.improvements
 
 /** The parties using an address as their mailing address, a page at a time. */
 export const usePartiesByAddress = (addressId: string) =>
   useInfiniteQuery(
-    AddressesService.method.getPartiesByAddressId,
+    PartiesService.method.getPartiesByAddressId,
     { addressId, first: PAGE_SIZE, after: FIRST_PAGE },
     pagedOptions,
   )
 
 /** The rows on one page of `usePartiesByAddress`. */
-export const partiesByAddressRows = (page: GetPartiesByAddressIdResponse) => edgeNodes(page)
+export const partiesByAddressRows = (page: GetPartiesByAddressIdResponse) => page.parties
