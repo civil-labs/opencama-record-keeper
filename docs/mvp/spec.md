@@ -6,6 +6,7 @@
 | **Date** | 2026-11-15 |
 | **Status** | Draft. Accepted when merged, after [`intent.md`](intent.md). |
 | **Intent** | [`intent.md`](intent.md) |
+| **Changed by** | [`../civil-os-0.6/spec.md`](../civil-os-0.6/spec.md): public API 0.5's service names and SDK pin. |
 
 This spec sets out the contract for the MVP: stack, config, auth, routes, what
 each page shows, and how it's tested. The order of the work goes in `plan.md`.
@@ -19,7 +20,7 @@ each page shows, and how it's tested. The order of the work goes in `plan.md`.
 | Styling | StyleX (`@stylexjs/stylex`), with its official Vite integration | Styles are typed and live next to the components that use them. They compile to one static, atomic CSS file at build time, with no runtime style injection, so the CSP needs no `'unsafe-inline'`. See [Styling](#styling). |
 | Routing | `@tanstack/react-router` (pinned to an exact version), with routes defined in code | Every record gets a real, shareable URL, and Back works. Route paths, params and search params are type-checked, so a broken link is a compile error. Loaders share the TanStack Query cache. |
 | Data | `@tanstack/react-query` + `@connectrpc/connect-query` | One shared cache for lookups, cursor pagination for transfers, per-section loading and errors, and one retry policy based on Connect error codes. For the edit phase it adds mutations, invalidation and refetch on focus. Connect-Query builds typed queries and keys from the SDK's method descriptors (see [Data fetching](#data-fetching)). |
-| API client | `@civil-labs/civil-os-api` (exactly `0.4.0`, public-api v0.4.0), `@connectrpc/connect`, `@connectrpc/connect-web` | The published, generated client. Connect JSON over `fetch`. 0.3.0 added the address, party, parcel-extent, transfers-by-party and neighborhood-definition reads this spec uses; 0.4.0 renamed `GetNeighborhoodDefinitionsResponse`'s map to `neighborhoodDefinitions`. |
+| API client | `@civil-labs/civil-os-api` (exactly `0.5.0`, public-api v0.5.0, needing civil-os v0.6.0 or later), `@connectrpc/connect`, `@connectrpc/connect-web` | The published, generated client. Connect JSON over `fetch`. 0.3.0 added the address, party, parcel-extent, transfers-by-party and neighborhood-definition reads this spec uses; 0.4.0 renamed `GetNeighborhoodDefinitionsResponse`'s map to `neighborhoodDefinitions`. 0.5.0 renamed and moved services, and dropped edges from paged responses. |
 | Map | `maplibre-gl` | Renders a basemap style, with the Civil OS MVT parcel tiles on top. |
 | Auth | `oidc-client-ts` | Authorization code + PKCE in the browser, against any OIDC issuer. |
 | Tests | `vitest` | Unit tests for the pure helpers. |
@@ -518,7 +519,7 @@ from the details below.
 
 **Options:**
 
-- **Source:** `NeighborhoodService/GetNeighborhoodDefinitions`, fetched once **on app
+- **Source:** `NeighborhoodsService/GetNeighborhoodDefinitions`, fetched once **on app
   load**. The definitions are the response's `neighborhoodDefinitions` map, keyed by ID.
   The signed-in (`app`) route's loader calls `prefetchQuery` for it after the auth
   check, since the call needs a token. `prefetchQuery` rather than `ensureQueryData`,
@@ -665,7 +666,7 @@ and its mailing address as of the transfer.
 |---|---|
 | Land use | `LandUsesService/GetLandUses` |
 | Zoning | `ZoningService/GetZoning` |
-| Neighborhood | `NeighborhoodService/GetNeighborhoods` |
+| Neighborhood | `NeighborhoodsService/GetNeighborhoods` |
 
 - Each returns the whole map, which is cached for the session (`staleTime: Infinity`)
   and shared with the parcel page's labels. The route's loader prefetches it. The page
@@ -693,9 +694,9 @@ with `after`), loaded on its own like the parcel's transfers:
 
 | Section | RPC | Each row |
 |---|---|---|
-| Parcels at this address | `AddressesService/GetParcelsByAddressId` | A link to `/parcels/:parcelId` |
-| Improvements at this address | `AddressesService/GetImprovementsByAddressId` | The improvement ID as plain text, then a link to each of its `parcelIds` |
-| Parties using this as their mailing address | `AddressesService/GetPartiesByAddressId` | A link to `/parties/:partyId`, labeled with the party's `name` |
+| Parcels at this address | `ParcelsService/GetParcelsByAddressId` | A link to `/parcels/:parcelId` |
+| Improvements at this address | `ImprovementsService/GetImprovementsByAddressId` | The improvement ID as plain text, then a link to each of its `parcelIds` |
+| Parties using this as their mailing address | `PartiesService/GetPartiesByAddressId` | A link to `/parties/:partyId`, labeled with the party's `name` |
 
 **Not found:** an ID missing from `addresses` shows "No address with this ID".
 
@@ -711,7 +712,7 @@ route's loader.
 
 | Section | RPC | Each row |
 |---|---|---|
-| Parcels | `PartiesService/GetParcelsByPartyId` | A link to `/parcels/:parcelId`, then `ownershipShare` |
+| Parcels | `ParcelsService/GetParcelsByPartyId` | A link to `/parcels/:parcelId`, then `ownershipShare` |
 | Transfers | `RealPropertyTransfersService/GetTransfersByPartyId` with `partyIds: [partyId]` | Time, amount, and a link to `/transfers/:id`, as on the parcel pane |
 
 **Not found:** an ID missing from `parties` shows "No party with this ID".

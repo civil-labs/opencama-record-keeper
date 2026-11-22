@@ -2,9 +2,10 @@
 // Connect router transport. Synthetic data only.
 import {
   AddressesService,
+  ImprovementsService,
   PartiesService,
   LandUsesService,
-  NeighborhoodService,
+  NeighborhoodsService,
   ParcelsService,
   RealPropertyTransfersService,
   ZoningService,
@@ -113,7 +114,7 @@ export function fakeCivilOs(
     router.service(ZoningService, {
       getZoning: () => ({ zoning: { [IDS.zoning]: { id: IDS.zoning, name: 'Fixture Residential', code: 'R-1' } } }),
     })
-    router.service(NeighborhoodService, {
+    router.service(NeighborhoodsService, {
       getNeighborhoods: () => ({
         neighborhoods: {
           [IDS.neighborhood]: {
@@ -208,6 +209,23 @@ export function fakeCivilOs(
         }
         return { extents }
       },
+      getParcelsByAddressId: (req) => {
+        record('getParcelsByAddressId', req)
+        return {
+          parcels: [{ parcelId: IDS.parcel, featureId: 1002n }],
+          pageInfo: { hasNextPage: false },
+        }
+      },
+      getParcelsByPartyId: (req) => {
+        record('getParcelsByPartyId', req)
+        return {
+          parcels: [
+            { parcelId: IDS.parcel, ownershipShare: '0.5000' },
+            { parcelId: IDS.parcelNoGeometry, ownershipShare: '1.0000' },
+          ],
+          pageInfo: { hasNextPage: false },
+        }
+      },
     })
     router.service(RealPropertyTransfersService, {
       getTransfersById: (req) => {
@@ -252,12 +270,7 @@ export function fakeCivilOs(
       getTransfersByPartyId: (req) => {
         record('getTransfersByPartyId', req)
         return {
-          edges: [
-            {
-              cursor: 't1',
-              node: { transferId: IDS.transfer(3), transferAmount: '520000.0000' },
-            },
-          ],
+          transfers: [{ transferId: IDS.transfer(3), transferAmount: '520000.0000' }],
           pageInfo: { hasNextPage: false },
         }
       },
@@ -269,23 +282,20 @@ export function fakeCivilOs(
         const start = req.after ? Number(req.after) : 0
         const first = req.first ?? 25
         const end = Math.min(start + first, transferCount)
-        const edges = []
+        const transfers = []
         for (let n = start; n < end; n++) {
-          edges.push({
-            cursor: String(n + 1),
-            node: {
-              transferId: IDS.transfer(n + 1),
-              transferTime: { seconds: BigInt(1700000000 + n * 86400), nanos: 0 },
-              transferAmount: `${String(100000 + n)}.00`,
-            },
+          transfers.push({
+            transferId: IDS.transfer(n + 1),
+            transferTime: { seconds: BigInt(1700000000 + n * 86400), nanos: 0 },
+            transferAmount: `${String(100000 + n)}.00`,
           })
         }
         return {
-          edges,
+          transfers,
           pageInfo: {
             hasNextPage: end < transferCount,
             hasPreviousPage: start > 0,
-            endCursor: edges.length ? String(end) : undefined,
+            endCursor: transfers.length ? String(end) : undefined,
           },
         }
       },
@@ -308,37 +318,25 @@ export function fakeCivilOs(
         }
         return { addresses }
       },
-      getParcelsByAddressId: (req) => {
-        record('getParcelsByAddressId', req)
-        return {
-          edges: [{ cursor: 'p1', node: { parcelId: IDS.parcel, featureId: 1002n } }],
-          pageInfo: { hasNextPage: false },
-        }
-      },
+    })
+    router.service(ImprovementsService, {
       getImprovementsByAddressId: (req) => {
         record('getImprovementsByAddressId', req)
         return {
-          edges: [
-            { cursor: 'i1', node: { improvementId: IDS.improvement, parcelIds: [IDS.parcel] } },
-          ],
-          pageInfo: { hasNextPage: false },
-        }
-      },
-      getPartiesByAddressId: (req) => {
-        record('getPartiesByAddressId', req)
-        if (options.failPartiesByAddress) throw new ConnectError('reader down', Code.Unavailable)
-        return {
-          edges: [
-            {
-              cursor: 'm1',
-              node: { partyId: IDS.partyA, name: 'Fixture Owner 2', mailingAddressId: IDS.address },
-            },
-          ],
+          improvements: [{ improvementId: IDS.improvement, parcelIds: [IDS.parcel] }],
           pageInfo: { hasNextPage: false },
         }
       },
     })
     router.service(PartiesService, {
+      getPartiesByAddressId: (req) => {
+        record('getPartiesByAddressId', req)
+        if (options.failPartiesByAddress) throw new ConnectError('reader down', Code.Unavailable)
+        return {
+          parties: [{ partyId: IDS.partyA, name: 'Fixture Owner 2', mailingAddressId: IDS.address }],
+          pageInfo: { hasNextPage: false },
+        }
+      },
       getPartiesById: (req) => {
         record('getPartiesById', req)
         const parties: Record<string, object> = {}
@@ -354,16 +352,6 @@ export function fakeCivilOs(
           parties[IDS.partyC] = { partyId: IDS.partyC, name: 'Fixture Owner 4', mailingAddress: 'PO Box 4' }
         }
         return { parties }
-      },
-      getParcelsByPartyId: (req) => {
-        record('getParcelsByPartyId', req)
-        return {
-          edges: [
-            { cursor: 'q1', node: { parcelId: IDS.parcel, ownershipShare: '0.5000' } },
-            { cursor: 'q2', node: { parcelId: IDS.parcelNoGeometry, ownershipShare: '1.0000' } },
-          ],
-          pageInfo: { hasNextPage: false },
-        }
       },
     })
     options.register?.(router)

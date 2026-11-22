@@ -7,7 +7,8 @@ and the header of `database/fixtures/synthetic.sql`).
 
 ## Setup
 
-1. In civil-os, start from a clean stack: `mise run down`, then `mise run up`.
+1. In civil-os (v0.6.0 or later), start from a clean stack: `mise run down`, then
+   `mise run up`.
 2. Here, run `npm ci`, then `npm run dev`, and open <http://localhost:3000>.
    **Or, to check an image** instead of the dev server, run it on port 3000:
    `docker run --rm -p 3000:8080 ghcr.io/civil-labs/opencama-record-keeper:<tag>`.
