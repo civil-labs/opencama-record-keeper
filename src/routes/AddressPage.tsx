@@ -7,6 +7,9 @@ import { notFound, useParams } from '@tanstack/react-router'
 import { Fragment } from 'react'
 import {
   addressQuery,
+  improvementsByAddressRows,
+  parcelsByAddressRows,
+  partiesByAddressRows,
   useImprovementsByAddress,
   useParcelsByAddress,
   usePartiesByAddress,
@@ -70,7 +73,7 @@ function ParcelsSection({ addressId }: { addressId: string }) {
   return (
     <section>
       <h2>Parcels at this address</h2>
-      <PagedList query={useParcelsByAddress(addressId)}>
+      <PagedList query={useParcelsByAddress(addressId)} rows={parcelsByAddressRows}>
         {(parcels) => (
           <ul>
             {parcels.map((parcel) => (
@@ -89,7 +92,7 @@ function ImprovementsSection({ addressId }: { addressId: string }) {
   return (
     <section>
       <h2>Improvements at this address</h2>
-      <PagedList query={useImprovementsByAddress(addressId)}>
+      <PagedList query={useImprovementsByAddress(addressId)} rows={improvementsByAddressRows}>
         {(improvements) => (
           <table>
             <thead>
@@ -128,7 +131,7 @@ function PartiesSection({ addressId }: { addressId: string }) {
   return (
     <section>
       <h2>Parties using this as their mailing address</h2>
-      <PagedList query={usePartiesByAddress(addressId)}>
+      <PagedList query={usePartiesByAddress(addressId)} rows={partiesByAddressRows}>
         {(parties) => (
           <ul>
             {parties.map((party) => (

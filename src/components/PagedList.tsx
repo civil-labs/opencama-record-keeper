@@ -17,38 +17,43 @@ export const PAGE_SIZE = 25
  */
 export const FIRST_PAGE = undefined as unknown as string
 
-/** A Connect page: edges with nodes, and where the next page starts. */
-export interface Page<T> {
-  edges: { node?: T }[]
+/** A Connect page: where the next page starts. Each caller names its rows. */
+export interface Page {
   pageInfo?: { hasNextPage: boolean; endCursor?: string }
 }
 
+/** A page's rows, from public API 0.4's edges. */
+export function edgeNodes<T>(page: { edges: { node?: T }[] }): T[] {
+  return page.edges.flatMap((edge) => (edge.node ? [edge.node] : []))
+}
+
 /** The next page's cursor, or undefined when there's no next page. */
-export function nextCursor(page: Page<unknown>): string | undefined {
+export function nextCursor(page: Page): string | undefined {
   return page.pageInfo?.hasNextPage ? page.pageInfo.endCursor : undefined
 }
 
 /** Options shared by every paginated query, for `useInfiniteQuery`. */
 export const pagedOptions = { pageParamKey: 'after', getNextPageParam: nextCursor } as const
 
-export function PagedList<T>({
+export function PagedList<P extends Page, T>({
   query,
+  rows,
   children,
 }: {
-  query: UseInfiniteQueryResult<InfiniteData<Page<T>>, ConnectError>
+  query: UseInfiniteQueryResult<InfiniteData<P>, ConnectError>
+  /** The rows on one page, such as `(page) => page.transfers`. */
+  rows: (page: P) => T[]
   /** Renders the loaded rows; never called with none. */
-  children: (nodes: T[]) => ReactNode
+  children: (rows: T[]) => ReactNode
 }) {
   if (query.isPending) return <p>Loading…</p>
   // A failed first page has no data. A failed "More" keeps the pages already
   // loaded, and shows its error below them.
   if (!query.data) return <ErrorAlert error={query.error} />
-  const nodes = query.data.pages.flatMap((page) =>
-    page.edges.flatMap((edge) => (edge.node ? [edge.node] : [])),
-  )
+  const loaded = query.data.pages.flatMap(rows)
   return (
     <>
-      {nodes.length === 0 ? <p>None.</p> : children(nodes)}
+      {loaded.length === 0 ? <p>None.</p> : children(loaded)}
       {query.isFetchNextPageError && <ErrorAlert error={query.error} />}
       {query.hasNextPage && (
         <button

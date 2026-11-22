@@ -3,7 +3,7 @@
 import { useTransport } from '@connectrpc/connect-query'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { notFound, useParams } from '@tanstack/react-router'
-import { partyQuery, useParcelsByParty } from '../api/parties.ts'
+import { parcelsByPartyRows, partyQuery, useParcelsByParty } from '../api/parties.ts'
 import { Fields } from '../components/Fields.tsx'
 import { PagedList } from '../components/PagedList.tsx'
 import { TransfersList, useTransfersByParty } from '../components/TransfersList.tsx'
@@ -43,7 +43,7 @@ function ParcelsSection({ partyId }: { partyId: string }) {
   return (
     <section>
       <h2>Parcels</h2>
-      <PagedList query={useParcelsByParty(partyId)}>
+      <PagedList query={useParcelsByParty(partyId)} rows={parcelsByPartyRows}>
         {(parcels) => (
           <table>
             <thead>
