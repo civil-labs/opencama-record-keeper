@@ -138,9 +138,11 @@ v0.6.0 gateway fails, and so does one on 0.5.0 against v0.5.1.
 - Before that PR, run the smoke checklists against the v0.6.0 local stack
   ([Smoke](#smoke)). After it syncs, open `https://records-leepa.civillabs.app`,
   then load an address page, a party page and the lookup page.
-- The commit that bumps the SDK carries a `BREAKING CHANGE:` footer saying the
-  app needs civil-os v0.6.0. Under `bump-minor-pre-major`, release-please makes
-  that 0.1.1 → **0.2.0**, and the footer goes in the release notes.
+- The PR that bumps the SDK has a `!` in its title (`feat!: …`). The repo
+  squash-merges with a blank body, so the title is the only part of the
+  commit that reaches `main`. Under `bump-minor-pre-major`, release-please
+  makes that 0.1.1 → **0.2.0**. The PR description says the app needs
+  civil-os v0.6.0.
 
 ## Non-goals
 
