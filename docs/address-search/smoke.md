@@ -8,7 +8,7 @@ The data is described in the header of civil-os
 
 ## Setup
 
-1. In civil-os (at #69 or later), start from a clean stack: `mise run down`,
+1. In civil-os (v0.6.0 or later), start from a clean stack: `mise run down`,
    then `mise run up`.
 2. Here, run `npm ci`, then `npm run dev`, and open <http://localhost:3000>.
 3. Sign in as `dev@example.com` with password `civil-os-dev-password`, the

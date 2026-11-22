@@ -82,6 +82,10 @@
    - `TransfersList` gets its `TransfersPage` prop type, written against
      0.4.1's `edges` for now.
    - Checks pass with no test changes. This step is safe on its own.
+   - **As built:** the 0.4.1 reading is one temporary helper, `edgeNodes(page)`
+     in `PagedList.tsx`, which every row function called. Step 2 deleted it.
+     Checks: 28 test files and 254 tests pass. The bundle is 1,823.22 kB
+     (505.24 kB gzipped).
 2. **`feat!: public API 0.5`**
    - `npm install --save-exact @civil-labs/civil-os-api@0.5.0`.
    - `src/api/lookups.ts`: `NeighborhoodsService`.
@@ -99,11 +103,21 @@
      reading the branch. The PR title is what release-please sees.
    - Checks pass. No expected value in any test changes: `git diff` on
      `*.test.tsx` shows only imports and service names.
+   - **As built:** `ParcelsService` was already registered in the fixtures, so
+     the two moved parcel lookups joined that block instead of a second
+     `router.service` call. `ImprovementsService` got its first block. No
+     route or component changed apart from the row functions. The only
+     test-file change is `NeighborhoodsService` in `LookupPage.test.tsx`.
+     Checks: 28 test files and 254 tests pass. The bundle is 1,824.56 kB
+     (505.60 kB gzipped).
 3. **`docs: civil-os 0.6 service names in the MVP spec and smoke checklists`**
    - `docs/mvp/spec.md`, lines 521, 668, 696–698 and 714: the new service names,
      with a note that `docs/civil-os-0.6/spec.md` changed them.
    - `docs/address-search/smoke.md` and `docs/mvp/smoke.md`: civil-os
      **v0.6.0 or later**.
+   - **As built:** `docs/mvp/spec.md` also gets a **Changed by** row in its
+     header table (it had no way to note later specs), and its stack table's
+     SDK pin, which still said `0.4.0`, now says `0.5.0`.
 4. **Smoke run** (no commit unless the checklists need fixing)
    - Against the v0.6.0 local stack, run `docs/mvp/smoke.md` and
      `docs/address-search/smoke.md`, scripted in headless Firefox as before.
