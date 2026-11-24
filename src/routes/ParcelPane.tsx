@@ -74,6 +74,18 @@ function parcelFields(
   ]
 }
 
+/**
+ * A parcel's bathrooms as counts: "2 full, 1 half", or "3 full" with no half
+ * baths. Undefined, shown as empty, when both are 0 (civil-os reports 0 for
+ * counts that aren't recorded).
+ */
+export function formatBathrooms(full: number, half: number): string | undefined {
+  const parts = []
+  if (full > 0) parts.push(`${full} full`)
+  if (half > 0) parts.push(`${half} half`)
+  return parts.length ? parts.join(', ') : undefined
+}
+
 function improvementFields(summary: ParcelImprovementsSummary | undefined): Field[] {
   return [
     {
@@ -89,7 +101,11 @@ function improvementFields(summary: ParcelImprovementsSummary | undefined): Fiel
       id: summary?.primaryImprovementId,
     },
     { label: 'Total area (sq ft)', kind: 'text', value: summary?.totalAreaSqFt },
-    { label: 'Total bathrooms', kind: 'text', value: summary?.totalBathrooms },
+    {
+      label: 'Bathrooms',
+      kind: 'text',
+      value: summary && formatBathrooms(summary.totalFullBathrooms, summary.totalHalfBathrooms),
+    },
     { label: 'Total bedrooms', kind: 'text', value: summary?.totalBedrooms },
     { label: 'Total units', kind: 'text', value: summary?.totalUnits },
     { label: 'Primary year built', kind: 'text', value: summary?.primaryYearBuilt },

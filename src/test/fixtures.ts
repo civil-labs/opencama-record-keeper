@@ -192,6 +192,9 @@ export function fakeCivilOs(
                 improvementIds: [IDS.improvement],
                 primaryImprovementId: IDS.improvement,
                 totalBedrooms: 3,
+                totalFullBathrooms: 2,
+                totalHalfBathrooms: 1,
+                totalBathrooms: 2.5,
               },
             }
           } else if (id === IDS.parcelNoGeometry) {
