@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { fakeCivilOs, IDS } from '../test/fixtures.ts'
+import { formatBathrooms } from './ParcelPane.tsx'
 import { renderApp } from '../test/appRouter.tsx'
 
 // The map needs WebGL, which jsdom doesn't have; these tests are about the pane.
@@ -26,6 +27,20 @@ describe('parcel pane', () => {
     // Feature and improvement IDs are plain text.
     expect(pane().getByText('1002')).toBeDefined()
     expect(pane().queryByRole('link', { name: IDS.improvement })).toBeNull()
+  })
+
+  test('shows bathrooms as full and half counts', async () => {
+    const { transport } = fakeCivilOs()
+    await renderApp(`/parcels/${IDS.parcel}`, transport)
+    expect(await pane().findByText('2 full, 1 half')).toBeDefined()
+    expect(pane().queryByText('Total bathrooms')).toBeNull()
+  })
+
+  test('formatBathrooms', () => {
+    expect(formatBathrooms(2, 1)).toBe('2 full, 1 half')
+    expect(formatBathrooms(3, 0)).toBe('3 full')
+    expect(formatBathrooms(0, 1)).toBe('1 half')
+    expect(formatBathrooms(0, 0)).toBeUndefined()
   })
 
   test('a parcel ID not in the response: "No parcel with this ID."', async () => {
