@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/civil-labs/opencama-record-keeper/compare/v0.2.0...v0.3.0) (2026-11-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* show bathrooms as full and half counts ([#27](https://github.com/civil-labs/opencama-record-keeper/issues/27))
+
+### Features
+
+* show bathrooms as full and half counts ([#27](https://github.com/civil-labs/opencama-record-keeper/issues/27)) ([ff9550d](https://github.com/civil-labs/opencama-record-keeper/commit/ff9550d55a141aabc58e7e7edcdaa176cee06b3d))
+
 ## [0.2.0](https://github.com/civil-labs/opencama-record-keeper/compare/v0.1.1...v0.2.0) (2026-11-22)
 
 
