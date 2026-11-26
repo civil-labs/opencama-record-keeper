@@ -1,7 +1,9 @@
 // Query options for parties (spec: Party).
 import {
+  ImprovementsService,
   ParcelsService,
   PartiesService,
+  type GetImprovementsByPartyIdResponse,
   type GetParcelsByPartyIdResponse,
 } from '@civil-labs/civil-os-api'
 import type { Transport } from '@connectrpc/connect'
@@ -35,3 +37,18 @@ export const useParcelsByParty = (partyId: string) =>
 
 /** The rows on one page of `useParcelsByParty`. */
 export const parcelsByPartyRows = (page: GetParcelsByPartyIdResponse) => page.parcels
+
+/**
+ * The improvements recorded under a party itself, a page at a time. Not the
+ * buildings on parcels it owns: those are on the parcels' pages.
+ */
+export const useImprovementsByParty = (partyId: string) =>
+  useInfiniteQuery(
+    ImprovementsService.method.getImprovementsByPartyId,
+    { partyId, first: PAGE_SIZE, after: FIRST_PAGE },
+    pagedOptions,
+  )
+
+/** The rows on one page of `useImprovementsByParty`. */
+export const improvementsByPartyRows = (page: GetImprovementsByPartyIdResponse) =>
+  page.improvements

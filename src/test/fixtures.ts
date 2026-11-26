@@ -37,6 +37,8 @@ export const IDS = {
   unknownCondition: '51000000-0000-4000-8000-000000000099',
   /** On two parcels, with no owners and no address. */
   improvementB: '53000000-0000-4000-8000-000000000016',
+  /** The improvements party B holds, for paging (1 to 30). */
+  heldImprovement: (n: number) => `53000000-0000-4000-8000-${String(100 + n).padStart(12, '0')}`,
   parcelB: 'a0000000-0000-4000-8000-000000000003',
   parcel: 'a0000000-0000-4000-8000-000000000002',
   parcelNoGeometry: 'a0000000-0000-4000-8000-000000000021',
@@ -102,6 +104,8 @@ export function fakeCivilOs(
     failSearch?: Code
     /** The three improvement lookups (types, conditions, qualities) fail. */
     failImprovementLookups?: boolean
+    /** The party page's improvements section fails. */
+    failImprovementsByParty?: boolean
     /** `getPartiesById` fails. */
     failPartiesById?: boolean
     /** Make every transfers page after the first fail. */
@@ -414,6 +418,25 @@ export function fakeCivilOs(
               name: 'Fixture Standard',
               qualityAdjustmentModifier: 1,
             },
+          },
+        }
+      },
+      getImprovementsByPartyId: (req) => {
+        record('getImprovementsByPartyId', req)
+        if (options.failImprovementsByParty) throw new ConnectError('reader down', Code.Unavailable)
+        const total = req.partyId === IDS.partyB ? 30 : 0
+        const start = req.after ? Number(req.after) : 0
+        const end = Math.min(start + (req.first ?? 25), total)
+        const improvements = []
+        for (let n = start; n < end; n++) {
+          improvements.push({ improvementId: IDS.heldImprovement(n + 1), ownershipShare: '1.0000' })
+        }
+        return {
+          improvements,
+          pageInfo: {
+            hasNextPage: end < total,
+            hasPreviousPage: start > 0,
+            endCursor: improvements.length ? String(end) : undefined,
           },
         }
       },
