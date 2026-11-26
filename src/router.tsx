@@ -14,9 +14,12 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router'
 import { addressQuery } from './api/addresses.ts'
+import { improvementQuery } from './api/improvements.ts'
 import type { InstanceMetadata } from './api/instance.ts'
 import {
   improvementConditionsQuery,
+  improvementQualitiesQuery,
+  improvementTypesQuery,
   landUsesQuery,
   neighborhoodDefinitionsQuery,
   neighborhoodsQuery,
@@ -31,6 +34,7 @@ import { currentDefinitionId, type DefinitionChoice } from './neighborhoodDefini
 import { Navbar } from './components/Navbar.tsx'
 import { RouteError } from './components/RouteError.tsx'
 import { AddressPage } from './routes/AddressPage.tsx'
+import { ImprovementPage } from './routes/ImprovementPage.tsx'
 import { Callback, CallbackError } from './routes/Callback.tsx'
 import { LandUsePage, NeighborhoodPage, ZoningPage } from './routes/LookupPage.tsx'
 import { NotFound } from './routes/NotFound.tsx'
@@ -258,6 +262,28 @@ const transferRoute = createRoute({
   notFoundComponent: () => <p>No transfer with this ID.</p>,
 })
 
+const improvementRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'improvements/$improvementId',
+  params: {
+    parse: ({ improvementId }) => ({ improvementId: parseUuid(improvementId) }),
+    stringify: ({ improvementId }) => ({ improvementId }),
+  },
+  /**
+   * Starts the three lookups the labels use, without waiting on them or
+   * failing on them, then waits for the improvement itself.
+   */
+  loader: async ({ context: { queryClient, transport }, params: { improvementId } }) => {
+    void queryClient.prefetchQuery(improvementTypesQuery(transport))
+    void queryClient.prefetchQuery(improvementConditionsQuery(transport))
+    void queryClient.prefetchQuery(improvementQualitiesQuery(transport))
+    const data = await queryClient.ensureQueryData(improvementQuery(transport, improvementId))
+    if (!(improvementId in data.improvements)) throw notFound()
+  },
+  component: ImprovementPage,
+  notFoundComponent: () => <p>No improvement with this ID.</p>,
+})
+
 const landUseRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'land-uses/$landUseId',
@@ -319,6 +345,7 @@ const routeTree = rootRoute.addChildren([
     parcelsRoute.addChildren([parcelsIndexRoute, parcelRoute]),
     addressRoute,
     partyRoute,
+    improvementRoute,
     transferRoute,
     landUseRoute,
     zoningRoute,

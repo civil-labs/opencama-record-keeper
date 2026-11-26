@@ -24,9 +24,14 @@ describe('parcel pane', () => {
     expect(href(IDS.partyB)).toBe(`/parties/${IDS.partyB}`)
     expect(href('Single family')).toBe(`/land-uses/${IDS.landUse}`)
     expect(href('Fixture Residential')).toBe(`/zoning/${IDS.zoning}`)
-    // Feature and improvement IDs are plain text.
+    // Feature IDs are plain text. Improvement IDs ("Improvements" and
+    // "Primary improvement") link to their pages.
     expect(pane().getByText('1002')).toBeDefined()
-    expect(pane().queryByRole('link', { name: IDS.improvement })).toBeNull()
+    const improvementLinks = pane().getAllByRole('link', { name: IDS.improvement })
+    expect(improvementLinks.map((link) => link.getAttribute('href'))).toEqual([
+      `/improvements/${IDS.improvement}`,
+      `/improvements/${IDS.improvement}`,
+    ])
   })
 
   test('names the primary condition from the conditions lookup', async () => {

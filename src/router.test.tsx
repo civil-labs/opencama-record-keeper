@@ -1,4 +1,4 @@
-import { act, cleanup, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, test } from 'vitest'
 import { parseUuid } from './router.tsx'
 import { noCallsTransport, recordCalls, renderApp } from './test/appRouter.tsx'
@@ -36,6 +36,7 @@ describe('routes', () => {
     ['/addresses/not-a-uuid', 'No address with this ID.'],
     ['/parties/not-a-uuid', 'No party with this ID.'],
     ['/transfers/not-a-uuid', 'No transfer with this ID.'],
+    ['/improvements/not-a-uuid', 'No improvement with this ID.'],
     ['/land-uses/not-a-uuid', 'Not found'],
     ['/zoning/not-a-uuid', 'Not found'],
     ['/neighborhoods/not-a-uuid', 'Not found'],
@@ -60,4 +61,18 @@ test('the neighborhood definitions load once, on app load, and stay cached', asy
   await act(() => router.navigate({ to: '/addresses/$addressId', params: { addressId: IDS.address } }))
   await act(() => router.navigate({ to: '/$', params: { _splat: 'no/such/page' } }))
   expect(calls.filter((c) => c.method === 'getNeighborhoodDefinitions')).toHaveLength(1)
+})
+
+test('hovering an improvement link preloads the improvement', async () => {
+  const { transport, calls } = fakeCivilOs()
+  await renderApp(`/addresses/${IDS.address}`, transport)
+  const section = (await screen.findByRole('heading', { name: 'Improvements at this address' }))
+    .closest('section') as HTMLElement
+  const link = await within(section).findByRole('link', { name: IDS.improvement })
+  expect(calls.filter((c) => c.method === 'getImprovementsById')).toEqual([])
+  fireEvent.mouseEnter(link)
+  await waitFor(() =>
+    expect(calls.filter((c) => c.method === 'getImprovementsById')).toHaveLength(1),
+  )
+  expect(screen.getByRole('heading', { name: /^Address:/ })).toBeDefined()
 })

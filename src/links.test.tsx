@@ -34,15 +34,16 @@ describe('RecordLink', () => {
     ['landUse', `/land-uses/${ID}`],
     ['zoning', `/zoning/${ID}`],
     ['neighborhood', `/neighborhoods/${ID}`],
+    ['improvement', `/improvements/${ID}`],
   ])('%s links to %s', async (type, href) => {
     await renderWithRouter(<RecordLink type={type} id={ID} />)
     expect(screen.getByRole('link', { name: ID }).getAttribute('href')).toBe(href)
   })
 
   test.each<RecordType>([
-    'improvement',
     'improvementType',
     'improvementCondition',
+    'improvementQuality',
     'landUseType',
     'neighborhoodDefinition',
   ])('%s has no route and renders plain text', async (type) => {

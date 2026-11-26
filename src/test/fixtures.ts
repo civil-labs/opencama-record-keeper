@@ -33,6 +33,11 @@ export const IDS = {
   improvementType: '50000000-0000-4000-8000-000000000001',
   improvementCondition: '51000000-0000-4000-8000-000000000002',
   improvementQuality: '52000000-0000-4000-8000-000000000001',
+  /** A condition ID that no lookup knows. */
+  unknownCondition: '51000000-0000-4000-8000-000000000099',
+  /** On two parcels, with no owners and no address. */
+  improvementB: '53000000-0000-4000-8000-000000000016',
+  parcelB: 'a0000000-0000-4000-8000-000000000003',
   parcel: 'a0000000-0000-4000-8000-000000000002',
   parcelNoGeometry: 'a0000000-0000-4000-8000-000000000021',
   missing: 'a0000000-0000-4000-8000-000000000099',
@@ -97,6 +102,8 @@ export function fakeCivilOs(
     failSearch?: Code
     /** The three improvement lookups (types, conditions, qualities) fail. */
     failImprovementLookups?: boolean
+    /** `getPartiesById` fails. */
+    failPartiesById?: boolean
     /** Make every transfers page after the first fail. */
     failNextTransfersPage?: boolean
     register?: (router: ConnectRouter) => void
@@ -329,6 +336,47 @@ export function fakeCivilOs(
       },
     })
     router.service(ImprovementsService, {
+      getImprovementsById: (req) => {
+        record('getImprovementsById', req)
+        const improvements: Record<string, object> = {}
+        if (req.improvementIds.includes(IDS.improvement)) {
+          improvements[IDS.improvement] = {
+            improvementId: IDS.improvement,
+            typeId: IDS.improvementType,
+            conditionId: IDS.improvementCondition,
+            qualityId: IDS.improvementQuality,
+            addressId: IDS.address,
+            formattedAddress: '2 Fixture Way, Testville ZZ000',
+            areaSqFt: 1399.307,
+            fullBathrooms: 2,
+            bathrooms: 2,
+            bedrooms: 3,
+            units: 1,
+            yearBuilt: 1982,
+            effectiveYearBuilt: 1992,
+            properties: '{"stories": 2}',
+            parcels: [{ parcelId: IDS.parcel, featureId: 1002n, isPrimary: true }],
+            parties: [
+              { partyId: IDS.partyA, ownershipShare: '0.5000' },
+              { partyId: IDS.partyB, ownershipShare: '0.5000' },
+            ],
+          }
+        }
+        if (req.improvementIds.includes(IDS.improvementB)) {
+          improvements[IDS.improvementB] = {
+            improvementId: IDS.improvementB,
+            typeId: IDS.improvementType,
+            conditionId: IDS.unknownCondition,
+            fullBathrooms: 0,
+            parcels: [
+              { parcelId: IDS.parcel, featureId: 1002n, isPrimary: false },
+              { parcelId: IDS.parcelB, featureId: 1003n, isPrimary: true },
+            ],
+            parties: [],
+          }
+        }
+        return { improvements }
+      },
       getImprovementTypes: () => {
         record('getImprovementTypes', {})
         if (options.failImprovementLookups) throw new ConnectError('reader down', Code.Unavailable)
@@ -388,6 +436,7 @@ export function fakeCivilOs(
       },
       getPartiesById: (req) => {
         record('getPartiesById', req)
+        if (options.failPartiesById) throw new ConnectError('reader down', Code.Unavailable)
         const parties: Record<string, object> = {}
         if (req.partyIds.includes(IDS.partyA)) {
           parties[IDS.partyA] = {
@@ -396,6 +445,9 @@ export function fakeCivilOs(
             mailingAddressId: IDS.address,
             mailingAddress: '2 Fixture Way, Testville ZZ000',
           }
+        }
+        if (req.partyIds.includes(IDS.partyB)) {
+          parties[IDS.partyB] = { partyId: IDS.partyB, name: 'Fixture Owner 3' }
         }
         if (req.partyIds.includes(IDS.partyC)) {
           parties[IDS.partyC] = { partyId: IDS.partyC, name: 'Fixture Owner 4', mailingAddress: 'PO Box 4' }

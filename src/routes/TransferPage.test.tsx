@@ -34,9 +34,11 @@ describe('transfer page', () => {
       `/parties/${IDS.partyB}`,
     )
 
-    // Improvement IDs are plain text.
+    // Improvement IDs link to their pages.
     const improvements = section('Improvements')
-    expect(improvements.getByText(IDS.improvement).tagName).toBe('TD')
+    expect(improvements.getByRole('link', { name: IDS.improvement }).getAttribute('href')).toBe(
+      `/improvements/${IDS.improvement}`,
+    )
     expect(improvements.getAllByRole('row')[1]?.textContent).toContain('—')
 
     // Parties, with their mailing address as of the transfer.
