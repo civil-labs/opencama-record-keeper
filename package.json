@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@civil-labs/civil-os-api": "0.6.0",
+    "@civil-labs/civil-os-api": "0.6.1",
     "@connectrpc/connect": "2.3.0",
     "@connectrpc/connect-query": "2.3.1",
     "@connectrpc/connect-web": "2.3.0",

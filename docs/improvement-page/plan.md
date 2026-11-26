@@ -228,6 +228,13 @@
 | The owner-names query and `partyQuery` cache the same party twice. | Harmless: both are reads of current data, and the cache's usual stale time applies to each. Noted, not merged. |
 | No fixture has an address with an unknown type, so the heading's "address alone" case wouldn't be reached through the page. | The label is an exported pure function, `improvementLabel(improvement, typeNames)`. A unit test covers all four cases: both, type only, address only, neither. `improvementB`'s unknown condition covers the field fallback through the page. |
 
+## As built
+
+- **Step 3, a fourth existing test.** `Fields.test.tsx` used `improvement` as
+  its example of a record type with no page. The example is now
+  `improvementType`, so the test still checks plain text for an unrouted
+  type. No assertion was loosened.
+
 ## Out of scope for this plan (per spec)
 
 A valuation picker; legal-time reads; transfers by improvement; pages for

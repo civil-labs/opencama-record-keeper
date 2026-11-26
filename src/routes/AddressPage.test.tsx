@@ -44,7 +44,9 @@ describe('address page', () => {
     )
     const improvements = section('Improvements at this address')
     expect(await improvements.findByRole('link', { name: IDS.parcel })).toBeDefined()
-    expect(improvements.queryByRole('link', { name: IDS.improvement })).toBeNull()
+    expect(improvements.getByRole('link', { name: IDS.improvement }).getAttribute('href')).toBe(
+      `/improvements/${IDS.improvement}`,
+    )
     const parties = section('Parties using this as their mailing address')
     expect(
       (await parties.findByRole('link', { name: 'Fixture Owner 2' })).getAttribute('href'),

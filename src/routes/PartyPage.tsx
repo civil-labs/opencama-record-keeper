@@ -1,9 +1,16 @@
 // A party (spec: Party): its name and mailing address, then its parcels with
-// their shares, and its transfers. Each section loads and paginates on its own.
+// their shares, the improvements recorded under it, and its transfers. Each
+// section loads and paginates on its own.
 import { useTransport } from '@connectrpc/connect-query'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { notFound, useParams } from '@tanstack/react-router'
-import { parcelsByPartyRows, partyQuery, useParcelsByParty } from '../api/parties.ts'
+import {
+  improvementsByPartyRows,
+  parcelsByPartyRows,
+  partyQuery,
+  useImprovementsByParty,
+  useParcelsByParty,
+} from '../api/parties.ts'
 import { Fields } from '../components/Fields.tsx'
 import { PagedList } from '../components/PagedList.tsx'
 import { TransfersList, useTransfersByParty } from '../components/TransfersList.tsx'
@@ -34,6 +41,7 @@ export function PartyPage() {
         ]}
       />
       <ParcelsSection partyId={partyId} />
+      <ImprovementsSection partyId={partyId} />
       <TransfersSection partyId={partyId} />
     </>
   )
@@ -59,6 +67,36 @@ function ParcelsSection({ partyId }: { partyId: string }) {
                     <RecordLink type="parcel" id={parcel.parcelId} />
                   </td>
                   <td>{parcel.ownershipShare}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </PagedList>
+    </section>
+  )
+}
+
+function ImprovementsSection({ partyId }: { partyId: string }) {
+  return (
+    <section>
+      <h2>Improvements</h2>
+      <PagedList query={useImprovementsByParty(partyId)} rows={improvementsByPartyRows}>
+        {(improvements) => (
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Improvement</th>
+                <th scope="col">Ownership share</th>
+              </tr>
+            </thead>
+            <tbody>
+              {improvements.map((improvement) => (
+                <tr key={improvement.improvementId}>
+                  <td>
+                    <RecordLink type="improvement" id={improvement.improvementId} />
+                  </td>
+                  <td>{improvement.ownershipShare}</td>
                 </tr>
               ))}
             </tbody>

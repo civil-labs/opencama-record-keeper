@@ -35,6 +35,11 @@ const routed = {
       {children}
     </Link>
   ),
+  improvement: (id: string, children: ReactNode) => (
+    <Link to="/improvements/$improvementId" params={{ improvementId: id }}>
+      {children}
+    </Link>
+  ),
   neighborhood: (id: string, children: ReactNode) => (
     <Link to="/neighborhoods/$neighborhoodId" params={{ neighborhoodId: id }}>
       {children}
@@ -46,9 +51,9 @@ export type RoutedRecordType = keyof typeof routed
 
 /** Record types with no page yet. Their IDs are shown as plain text. */
 export type UnroutedRecordType =
-  | 'improvement'
   | 'improvementType'
   | 'improvementCondition'
+  | 'improvementQuality'
   | 'landUseType'
   | 'neighborhoodDefinition'
 

@@ -7,7 +7,7 @@ and the header of `database/fixtures/synthetic.sql`).
 
 ## Setup
 
-1. In civil-os (v0.6.0 or later), start from a clean stack: `mise run down`, then
+1. In civil-os (v0.7.1 or later), start from a clean stack: `mise run down`, then
    `mise run up`.
 2. Here, run `npm ci`, then `npm run dev`, and open <http://localhost:3000>.
    **Or, to check an image** instead of the dev server, run it on port 3000:
@@ -62,7 +62,7 @@ From transfer 3:
 - [ ] Each parcel (6 and 7) opens its parcel page.
 - [ ] Each party opens its party page: the grantor and grantees in the Parcels table,
       and every row of the Parties table.
-- [ ] Improvement IDs are plain text.
+- [ ] Improvement IDs open their improvement pages ([`../improvement-page/smoke.md`](../improvement-page/smoke.md)).
 
 ## 4. Neighborhood definition
 

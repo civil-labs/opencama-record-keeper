@@ -2,6 +2,7 @@
 // pages use the same options, so they share one cache entry, fetched once per
 // session and shared with link labels.
 import {
+  ImprovementsService,
   LandUsesService,
   NeighborhoodsService,
   ZoningService,
@@ -33,3 +34,23 @@ export const neighborhoodDefinitionsQuery = (transport: Transport) => ({
   ),
   ...definitionsQueryOptions,
 })
+
+export const improvementTypesQuery = (transport: Transport) => ({
+  ...createQueryOptions(ImprovementsService.method.getImprovementTypes, {}, { transport }),
+  ...lookupQueryOptions,
+})
+
+export const improvementConditionsQuery = (transport: Transport) => ({
+  ...createQueryOptions(ImprovementsService.method.getImprovementConditions, {}, { transport }),
+  ...lookupQueryOptions,
+})
+
+export const improvementQualitiesQuery = (transport: Transport) => ({
+  ...createQueryOptions(ImprovementsService.method.getImprovementQualities, {}, { transport }),
+  ...lookupQueryOptions,
+})
+
+/** A label for each ID that a lookup map knows, by its `name`. */
+export function labels(map: Record<string, { name: string }> | undefined) {
+  return Object.fromEntries(Object.entries(map ?? {}).map(([id, { name }]) => [id, name]))
+}

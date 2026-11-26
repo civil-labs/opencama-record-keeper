@@ -62,13 +62,13 @@ describe('Fields', () => {
   test('record: a link when the type has a page, else plain text', async () => {
     await renderFields([
       { label: 'Land use', kind: 'record', type: 'landUse', id: ID, text: 'Residential' },
-      { label: 'Improvement', kind: 'record', type: 'improvement', id: ID },
+      { label: 'Improvement type', kind: 'record', type: 'improvementType', id: ID },
     ])
     expect(screen.getByRole('link', { name: 'Residential' }).getAttribute('href')).toBe(
       `/land-uses/${ID}`,
     )
-    expect(valueOf('Improvement').textContent).toBe(ID)
-    expect(valueOf('Improvement').querySelector('a')).toBeNull()
+    expect(valueOf('Improvement type').textContent).toBe(ID)
+    expect(valueOf('Improvement type').querySelector('a')).toBeNull()
   })
 
   test('records: each linked, comma-separated, with known labels', async () => {
