@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/civil-labs/opencama-record-keeper/compare/v0.3.0...v0.3.1) (2026-11-26)
+
+
+### Features
+
+* add the improvement page ([#31](https://github.com/civil-labs/opencama-record-keeper/issues/31)) ([47246ea](https://github.com/civil-labs/opencama-record-keeper/commit/47246ea939d6ecd65593cb802254dcd212926875))
+
 ## [0.3.0](https://github.com/civil-labs/opencama-record-keeper/compare/v0.2.0...v0.3.0) (2026-11-24)
 
 
