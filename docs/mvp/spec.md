@@ -6,7 +6,7 @@
 | **Date** | 2026-11-15 |
 | **Status** | Draft. Accepted when merged, after [`intent.md`](intent.md). |
 | **Intent** | [`intent.md`](intent.md) |
-| **Changed by** | [`../civil-os-0.6/spec.md`](../civil-os-0.6/spec.md): public API 0.5's service names and SDK pin. |
+| **Changed by** | [`../civil-os-0.6/spec.md`](../civil-os-0.6/spec.md): public API 0.5's service names and SDK pin. [`../improvement-page/spec.md`](../improvement-page/spec.md): the improvement route, the party page's Improvements section, and the 0.6.1 pin. |
 
 This spec sets out the contract for the MVP: stack, config, auth, routes, what
 each page shows, and how it's tested. The order of the work goes in `plan.md`.
@@ -20,7 +20,7 @@ each page shows, and how it's tested. The order of the work goes in `plan.md`.
 | Styling | StyleX (`@stylexjs/stylex`), with its official Vite integration | Styles are typed and live next to the components that use them. They compile to one static, atomic CSS file at build time, with no runtime style injection, so the CSP needs no `'unsafe-inline'`. See [Styling](#styling). |
 | Routing | `@tanstack/react-router` (pinned to an exact version), with routes defined in code | Every record gets a real, shareable URL, and Back works. Route paths, params and search params are type-checked, so a broken link is a compile error. Loaders share the TanStack Query cache. |
 | Data | `@tanstack/react-query` + `@connectrpc/connect-query` | One shared cache for lookups, cursor pagination for transfers, per-section loading and errors, and one retry policy based on Connect error codes. For the edit phase it adds mutations, invalidation and refetch on focus. Connect-Query builds typed queries and keys from the SDK's method descriptors (see [Data fetching](#data-fetching)). |
-| API client | `@civil-labs/civil-os-api` (exactly `0.5.0`, public-api v0.5.0, needing civil-os v0.6.0 or later), `@connectrpc/connect`, `@connectrpc/connect-web` | The published, generated client. Connect JSON over `fetch`. 0.3.0 added the address, party, parcel-extent, transfers-by-party and neighborhood-definition reads this spec uses; 0.4.0 renamed `GetNeighborhoodDefinitionsResponse`'s map to `neighborhoodDefinitions`. 0.5.0 renamed and moved services, and dropped edges from paged responses. |
+| API client | `@civil-labs/civil-os-api` (exactly `0.6.1`, public-api v0.6.1, needing civil-os v0.7.1 or later), `@connectrpc/connect`, `@connectrpc/connect-web` | The published, generated client. Connect JSON over `fetch`. 0.3.0 added the address, party, parcel-extent, transfers-by-party and neighborhood-definition reads this spec uses; 0.4.0 renamed `GetNeighborhoodDefinitionsResponse`'s map to `neighborhoodDefinitions`. 0.5.0 renamed and moved services, and dropped edges from paged responses. 0.6.1 added the improvement reads (changed by [`../improvement-page/spec.md`](../improvement-page/spec.md)). |
 | Map | `maplibre-gl` | Renders a basemap style, with the Civil OS MVT parcel tiles on top. |
 | Auth | `oidc-client-ts` | Authorization code + PKCE in the browser, against any OIDC issuer. |
 | Tests | `vitest` | Unit tests for the pure helpers. |
@@ -347,7 +347,7 @@ How a field is shown:
 | Field holds | Shown as |
 |---|---|
 | The UUID of a type with a route | A `<Link>` to that route. The link text is the record's label when it's already known (for example a land use name from the lookup), otherwise the UUID. |
-| The UUID of a type with no route (improvements, improvement types and conditions) | Plain text |
+| The UUID of a type with no route (improvement types, conditions and qualities) (changed by [`../improvement-page/spec.md`](../improvement-page/spec.md)) | Plain text |
 | A decimal string or number | As returned, with no formatting |
 | A timestamp | ISO 8601 |
 | An empty optional field | `—` |
@@ -356,8 +356,8 @@ How a field is shown:
 **All record links go through one component.** `<RecordLink type id label?>` maps an
 entity type to its typed TanStack Router `<Link to="/parcels/$parcelId" params={...}>`.
 For a type with no page, it renders plain text. The mapping from type to route is one
-typed table, so adding a route for improvements later turns their IDs into links
-everywhere at once. No page builds a URL string by hand.
+typed table, so adding a route for improvements turned their IDs into links
+everywhere at once (changed by [`../improvement-page/spec.md`](../improvement-page/spec.md)). No page builds a URL string by hand.
 
 ### Parcels (`/parcels` and `/parcels/:parcelId`)
 
@@ -713,6 +713,7 @@ route's loader.
 | Section | RPC | Each row |
 |---|---|---|
 | Parcels | `ParcelsService/GetParcelsByPartyId` | A link to `/parcels/:parcelId`, then `ownershipShare` |
+| Improvements (changed by [`../improvement-page/spec.md`](../improvement-page/spec.md)) | `ImprovementsService/GetImprovementsByPartyId` | A link to `/improvements/:improvementId`, then `ownershipShare` |
 | Transfers | `RealPropertyTransfersService/GetTransfersByPartyId` with `partyIds: [partyId]` | Time, amount, and a link to `/transfers/:id`, as on the parcel pane |
 
 **Not found:** an ID missing from `parties` shows "No party with this ID".
@@ -799,7 +800,7 @@ src/
     instance.ts      # the one plain call made before auth: GetInstanceMetadata
     lookups.ts       # query options for the whole-table lookups, shared by loaders and pages
     parcels.ts       # query options for parcels, their extents and feature lookups
-    transfers.ts  addresses.ts  parties.ts  # record queries and paginated section hooks
+    transfers.ts  addresses.ts  parties.ts  improvements.ts  # record queries and paginated section hooks
   links.tsx          # <RecordLink>, its type-to-route table, feature-id bigint/number helpers
   neighborhoodDefinition.ts  # selected definition: memory + localStorage store, default rule
   theme/
@@ -813,7 +814,7 @@ src/
   routes/
     ParcelsLayout.tsx  ParcelPane.tsx  NeighborhoodDefinitionSelect.tsx
     TransferPage.tsx  LookupPage.tsx
-    AddressPage.tsx  PartyPage.tsx  Callback.tsx  NotFound.tsx
+    AddressPage.tsx  PartyPage.tsx  ImprovementPage.tsx  Callback.tsx  NotFound.tsx
   components/
     Fields.tsx       # the <dl> renderer that follows the rendering rule
     PagedList.tsx    # any paginated section: first-page cursor, states, "More"
