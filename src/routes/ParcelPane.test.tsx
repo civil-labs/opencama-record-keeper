@@ -29,6 +29,21 @@ describe('parcel pane', () => {
     expect(pane().queryByRole('link', { name: IDS.improvement })).toBeNull()
   })
 
+  test('names the primary condition from the conditions lookup', async () => {
+    const { transport } = fakeCivilOs()
+    await renderApp(`/parcels/${IDS.parcel}`, transport)
+    expect(await pane().findByText('Average')).toBeDefined()
+    expect(pane().queryByText(IDS.improvementCondition)).toBeNull()
+  })
+
+  test('a failed conditions lookup shows the condition ID, and the pane still renders', async () => {
+    const { transport } = fakeCivilOs({ failImprovementLookups: true })
+    await renderApp(`/parcels/${IDS.parcel}`, transport)
+    expect(await pane().findByText(IDS.improvementCondition)).toBeDefined()
+    expect(pane().getByRole('heading', { name: 'Parcel: 2 Fixture Way, Testville ZZ000' })).toBeDefined()
+    expect(pane().queryByRole('alert')).toBeNull()
+  })
+
   test('shows bathrooms as full and half counts', async () => {
     const { transport } = fakeCivilOs()
     await renderApp(`/parcels/${IDS.parcel}`, transport)

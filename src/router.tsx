@@ -16,6 +16,7 @@ import {
 import { addressQuery } from './api/addresses.ts'
 import type { InstanceMetadata } from './api/instance.ts'
 import {
+  improvementConditionsQuery,
   landUsesQuery,
   neighborhoodDefinitionsQuery,
   neighborhoodsQuery,
@@ -192,11 +193,13 @@ const parcelRoute = createRoute({
   /**
    * Prefetches the parcel under the selected neighborhood definition, and the
    * lookups its labels use, and starts its extent for the map, in parallel.
-   * Transfers load on their own.
+   * Transfers load on their own. The improvement conditions lookup is only
+   * started: a failure there shows the condition's ID, not an error.
    */
   loader: async ({ context, params: { parcelId } }) => {
     const { queryClient, transport } = context
     void queryClient.prefetchQuery(parcelExtentQuery(transport, parcelId))
+    void queryClient.prefetchQuery(improvementConditionsQuery(transport))
     const [parcel] = await Promise.all([
       readParcel(context, parcelId),
       queryClient.ensureQueryData(landUsesQuery(transport)),

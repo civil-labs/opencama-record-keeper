@@ -5,17 +5,18 @@ import type { ParcelDetails, ParcelImprovementsSummary } from '@civil-labs/civil
 import { useTransport } from '@connectrpc/connect-query'
 import { useQuery } from '@tanstack/react-query'
 import { notFound, useParams } from '@tanstack/react-router'
-import { landUsesQuery, neighborhoodsQuery, zoningQuery } from '../api/lookups.ts'
+import {
+  improvementConditionsQuery,
+  labels,
+  landUsesQuery,
+  neighborhoodsQuery,
+  zoningQuery,
+} from '../api/lookups.ts'
 import { parcelQuery } from '../api/parcels.ts'
 import { ErrorAlert } from '../components/ErrorAlert.tsx'
 import { Fields, type Field } from '../components/Fields.tsx'
 import { TransfersList, useTransfersByParcel } from '../components/TransfersList.tsx'
 import { useNeighborhoodDefinition } from './NeighborhoodDefinitionSelect.tsx'
-
-/** A label for each ID that a lookup map knows, by its `name`. */
-function labels(map: Record<string, { name: string }> | undefined) {
-  return Object.fromEntries(Object.entries(map ?? {}).map(([id, { name }]) => [id, name]))
-}
 
 function parcelFields(
   parcel: ParcelDetails,
@@ -86,7 +87,10 @@ export function formatBathrooms(full: number, half: number): string | undefined 
   return parts.length ? parts.join(', ') : undefined
 }
 
-function improvementFields(summary: ParcelImprovementsSummary | undefined): Field[] {
+function improvementFields(
+  summary: ParcelImprovementsSummary | undefined,
+  conditions: Record<string, string>,
+): Field[] {
   return [
     {
       label: 'Improvements',
@@ -119,6 +123,7 @@ function improvementFields(summary: ParcelImprovementsSummary | undefined): Fiel
       kind: 'record',
       type: 'improvementCondition',
       id: summary?.primaryConditionId,
+      text: summary?.primaryConditionId && conditions[summary.primaryConditionId],
     },
     {
       label: 'Total market improvement value',
@@ -146,6 +151,7 @@ export function ParcelPane() {
   const landUses = useQuery(landUsesQuery(transport))
   const zoning = useQuery(zoningQuery(transport))
   const neighborhoods = useQuery(neighborhoodsQuery(transport))
+  const conditions = useQuery(improvementConditionsQuery(transport))
 
   if (query.isPending) return <p>Loading…</p>
   if (query.isError) return <ErrorAlert error={query.error} />
@@ -167,7 +173,12 @@ export function ParcelPane() {
       />
       <section>
         <h2>Improvements</h2>
-        <Fields fields={improvementFields(parcel.improvementSummary)} />
+        <Fields
+          fields={improvementFields(
+            parcel.improvementSummary,
+            labels(conditions.data?.improvementConditions),
+          )}
+        />
       </section>
       <ParcelTransfers parcelId={parcelId} />
     </>

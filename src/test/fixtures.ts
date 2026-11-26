@@ -30,6 +30,9 @@ export const IDS = {
   partyC: '30000000-0000-4000-8000-000000000004',
   code: '92000000-0000-4000-8000-000000000002',
   improvement: '53000000-0000-4000-8000-000000000002',
+  improvementType: '50000000-0000-4000-8000-000000000001',
+  improvementCondition: '51000000-0000-4000-8000-000000000002',
+  improvementQuality: '52000000-0000-4000-8000-000000000001',
   parcel: 'a0000000-0000-4000-8000-000000000002',
   parcelNoGeometry: 'a0000000-0000-4000-8000-000000000021',
   missing: 'a0000000-0000-4000-8000-000000000099',
@@ -92,6 +95,8 @@ export function fakeCivilOs(
     searchDelayMs?: number | ((query: string) => number)
     /** Every search fails with this code. */
     failSearch?: Code
+    /** The three improvement lookups (types, conditions, qualities) fail. */
+    failImprovementLookups?: boolean
     /** Make every transfers page after the first fail. */
     failNextTransfersPage?: boolean
     register?: (router: ConnectRouter) => void
@@ -191,6 +196,7 @@ export function fakeCivilOs(
               improvementSummary: {
                 improvementIds: [IDS.improvement],
                 primaryImprovementId: IDS.improvement,
+                primaryConditionId: IDS.improvementCondition,
                 totalBedrooms: 3,
                 totalFullBathrooms: 2,
                 totalHalfBathrooms: 1,
@@ -323,6 +329,46 @@ export function fakeCivilOs(
       },
     })
     router.service(ImprovementsService, {
+      getImprovementTypes: () => {
+        record('getImprovementTypes', {})
+        if (options.failImprovementLookups) throw new ConnectError('reader down', Code.Unavailable)
+        return {
+          improvementTypes: {
+            [IDS.improvementType]: {
+              id: IDS.improvementType,
+              name: 'Single family dwelling',
+              code: 'SFD',
+              description: 'Fixture dwelling',
+            },
+          },
+        }
+      },
+      getImprovementConditions: () => {
+        record('getImprovementConditions', {})
+        if (options.failImprovementLookups) throw new ConnectError('reader down', Code.Unavailable)
+        return {
+          improvementConditions: {
+            [IDS.improvementCondition]: {
+              id: IDS.improvementCondition,
+              name: 'Average',
+              depreciationModifier: 0.8,
+            },
+          },
+        }
+      },
+      getImprovementQualities: () => {
+        record('getImprovementQualities', {})
+        if (options.failImprovementLookups) throw new ConnectError('reader down', Code.Unavailable)
+        return {
+          improvementQualities: {
+            [IDS.improvementQuality]: {
+              id: IDS.improvementQuality,
+              name: 'Fixture Standard',
+              qualityAdjustmentModifier: 1,
+            },
+          },
+        }
+      },
       getImprovementsByAddressId: (req) => {
         record('getImprovementsByAddressId', req)
         return {
